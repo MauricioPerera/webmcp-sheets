@@ -2,6 +2,11 @@
 
 A 100% functional, responsive **Google Sheets** clone deployable directly to **GitHub Pages** (100% client-side, zero server required). Built with **Tailwind CSS**, **HTMX**, governed by **Knowledge-Driven Development (KDD)** from [MauricioPerera/KDD](https://github.com/MauricioPerera/KDD), and powered by **FastWebMCP** & [webmcp.com](https://webmcp.com) standards.
 
+### 🌐 Live Deployments
+- 🚀 **Landing Page**: [https://mauricioperera.github.io/webmcp-sheets/](https://mauricioperera.github.io/webmcp-sheets/)
+- 📊 **Spreadsheet Application**: [https://mauricioperera.github.io/webmcp-sheets/app.html](https://mauricioperera.github.io/webmcp-sheets/app.html)
+- 🤖 **LLM Directives & Context**: [`/llms.txt`](https://mauricioperera.github.io/webmcp-sheets/llms.txt) | [`/llms-full.txt`](https://mauricioperera.github.io/webmcp-sheets/llms-full.txt)
+
 ---
 
 ## Key Features
