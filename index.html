@@ -43,10 +43,96 @@
 
   <!-- 8. Declarative WebMCP Forms (Autonomous Agent Discovery Surface) -->
   <div id="declarative-webmcp-surface" class="sr-only">
-    <form toolname="sheets_quick_entry" tooldescription="Fast entry of cell text or formula into active spreadsheet">
-      <input type="text" name="cell" toolparamdescription="Target cell coordinate, e.g. A1" />
-      <input type="text" name="value" toolparamdescription="Value or formula starting with '='" />
-      <button type="submit">Submit to sheet</button>
+    <!-- 1. sheets_quick_entry -->
+    <form toolname="sheets_quick_entry" tooldescription="Fast entry of cell text or formula into active spreadsheet" tooloutputschema='{"type":"object","properties":{"success":{"type":"boolean"},"cell":{"type":"string"},"value":{"type":["string","number","boolean"]}},"required":["success","cell"]}'>
+      <input type="text" name="cell" required pattern="^([A-Za-z0-9_]+!)?[A-Za-z]+[1-9][0-9]*$" placeholder="A1" toolparamdescription="Target cell coordinate in standard A1 notation (e.g. A1, B2, Z100)" />
+      <input type="text" name="value" required placeholder="=SUM(A1:A5)" toolparamdescription="Literal string, numeric value, or formula starting with '=' (e.g. '100' or '=SUM(A1:A5)')" />
+      <button type="submit">Submit entry</button>
+    </form>
+
+    <!-- 2. sheets_set_cell -->
+    <form toolname="sheets_set_cell" tooldescription="Set raw value or formula for a cell in the active or named worksheet" tooloutputschema='{"type":"object","properties":{"success":{"type":"boolean"},"cell":{"type":"string"},"value":{"type":["string","number","boolean"]}},"required":["success","cell"]}'>
+      <input type="text" name="cell" required pattern="^([A-Za-z0-9_]+!)?[A-Za-z]+[1-9][0-9]*$" placeholder="A1" toolparamdescription="Cell coordinate in standard A1 notation (e.g. A1, C10)" />
+      <input type="text" name="value" required placeholder="=A1*2" toolparamdescription="String literal, numeric value, or formula starting with '=' (e.g. '=SUM(A1:A10)')" />
+      <input type="text" name="sheet" placeholder="Sheet1" toolparamdescription="Optional worksheet tab name (defaults to active sheet)" />
+      <button type="submit">Set Cell</button>
+    </form>
+
+    <!-- 3. sheets_get_cell -->
+    <form toolname="sheets_get_cell" tooldescription="Get raw value, computed value and format of a specific cell" tooloutputschema='{"type":"object","properties":{"cell":{"type":"string"},"sheet":{"type":"string"},"raw":{"type":"string"},"value":{"type":["string","number","boolean"]},"error":{"type":["string","null"]}},"required":["cell","sheet","raw","value"]}'>
+      <input type="text" name="cell" required pattern="^([A-Za-z0-9_]+!)?[A-Za-z]+[1-9][0-9]*$" placeholder="A1" toolparamdescription="Cell coordinate reference in standard A1 notation, e.g. A1 or Sheet1!B2" />
+      <input type="text" name="sheet" placeholder="Sheet1" toolparamdescription="Optional sheet tab name (defaults to active sheet)" />
+      <button type="submit">Get Cell</button>
+    </form>
+
+    <!-- 4. sheets_get_range -->
+    <form toolname="sheets_get_range" tooldescription="Get values and formulas for a rectangular range of cells" tooloutputschema='{"type":"object","properties":{"range":{"type":"string"},"sheet":{"type":"string"},"matrix":{"type":"array"}},"required":["range","sheet","matrix"]}'>
+      <input type="text" name="range" required pattern="^([A-Za-z0-9_]+!)?[A-Za-z]+[1-9][0-9]*:[A-Za-z]+[1-9][0-9]*$" placeholder="A1:B5" toolparamdescription="Rectangular 2D range reference in A1:B10 format" />
+      <input type="text" name="sheet" placeholder="Sheet1" toolparamdescription="Optional worksheet tab name" />
+      <button type="submit">Get Range</button>
+    </form>
+
+    <!-- 5. sheets_set_range -->
+    <form toolname="sheets_set_range" tooldescription="Batch set a 2D matrix of values or formulas starting at a top-left cell" tooloutputschema='{"type":"object","properties":{"success":{"type":"boolean"},"rowsUpdated":{"type":"number"}},"required":["success","rowsUpdated"]}'>
+      <input type="text" name="startCell" required pattern="^([A-Za-z0-9_]+!)?[A-Za-z]+[1-9][0-9]*$" placeholder="A1" toolparamdescription="Top-left starting cell coordinate, e.g. A1" />
+      <textarea name="values" required placeholder="[['Header1', 'Header2'], ['10', '20']]" toolparamdescription="JSON-encoded 2D array of strings representing table rows and columns"></textarea>
+      <input type="text" name="sheet" placeholder="Sheet1" toolparamdescription="Optional sheet tab name" />
+      <button type="submit">Set Range</button>
+    </form>
+
+    <!-- 6. sheets_evaluate_formula -->
+    <form toolname="sheets_evaluate_formula" tooldescription="Evaluate an arbitrary formula expression on the fly without writing to any cell" tooloutputschema='{"type":"object","properties":{"formula":{"type":"string"},"result":{"type":["string","number","boolean","null"]},"error":{"type":["string","null"]}},"required":["formula"]}'>
+      <input type="text" name="formula" required pattern="^=.*$" placeholder="=SUM(10, 20, 30)" toolparamdescription="Spreadsheet formula starting with '=' (e.g. '=SUM(10, 20, 30)')" />
+      <input type="text" name="sheet" placeholder="Sheet1" toolparamdescription="Optional worksheet evaluation context" />
+      <button type="submit">Evaluate</button>
+    </form>
+
+    <!-- 7. sheets_clear_range -->
+    <form toolname="sheets_clear_range" tooldescription="Clear values and formatting in a specified rectangular range" tooloutputschema='{"type":"object","properties":{"success":{"type":"boolean"},"clearedRange":{"type":"string"}},"required":["success","clearedRange"]}'>
+      <input type="text" name="range" required pattern="^([A-Za-z0-9_]+!)?[A-Za-z]+[1-9][0-9]*:[A-Za-z]+[1-9][0-9]*$" placeholder="A1:C10" toolparamdescription="Range reference to wipe in A1:B10 format" />
+      <input type="text" name="sheet" placeholder="Sheet1" toolparamdescription="Optional sheet tab name" />
+      <button type="submit">Clear Range</button>
+    </form>
+
+    <!-- 8. sheets_create_sheet -->
+    <form toolname="sheets_create_sheet" tooldescription="Add a new sheet tab to the workbook with the given name" tooloutputschema='{"type":"object","properties":{"success":{"type":"boolean"},"sheetId":{"type":"string"},"name":{"type":"string"}},"required":["success","sheetId","name"]}'>
+      <input type="text" name="name" required placeholder="Q4_Forecast" toolparamdescription="Unique name for the new worksheet tab" />
+      <button type="submit">Create Sheet</button>
+    </form>
+
+    <!-- 9. sheets_delete_sheet -->
+    <form toolname="sheets_delete_sheet" tooldescription="Delete a sheet tab from the workbook by name" tooloutputschema='{"type":"object","properties":{"success":{"type":"boolean"},"deleted":{"type":"string"}},"required":["success","deleted"]}'>
+      <input type="text" name="name" required placeholder="TempSheet" toolparamdescription="Name of the sheet tab to delete" />
+      <button type="submit">Delete Sheet</button>
+    </form>
+
+    <!-- 10. sheets_list_sheets -->
+    <form toolname="sheets_list_sheets" tooldescription="List all sheets in the current workbook and report the active sheet" tooloutputschema='{"type":"object","properties":{"activeSheet":{"type":"string"},"sheets":{"type":"array"}},"required":["activeSheet","sheets"]}'>
+      <button type="submit">List Sheets</button>
+    </form>
+
+    <!-- 11. sheets_find_replace -->
+    <form toolname="sheets_find_replace" tooldescription="Find and replace text or formula substrings across cells" tooloutputschema='{"type":"object","properties":{"success":{"type":"boolean"},"replacementsCount":{"type":"number"}},"required":["success","replacementsCount"]}'>
+      <input type="text" name="find" required placeholder="OldText" toolparamdescription="String or substring to search for" />
+      <input type="text" name="replace" required placeholder="NewText" toolparamdescription="Replacement string to substitute" />
+      <input type="text" name="sheet" placeholder="Sheet1" toolparamdescription="Optional sheet tab name" />
+      <button type="submit">Find and Replace</button>
+    </form>
+
+    <!-- 12. sheets_export_data -->
+    <form toolname="sheets_export_data" tooldescription="Export spreadsheet data in CSV or JSON format" tooloutputschema='{"type":"object","properties":{"format":{"type":"string"},"data":{"type":"string"}},"required":["format","data"]}'>
+      <select name="format" required toolparamdescription="Export serialization format">
+        <option value="csv">csv</option>
+        <option value="json">json</option>
+      </select>
+      <input type="text" name="sheet" placeholder="Sheet1" toolparamdescription="Optional sheet tab name for CSV export" />
+      <button type="submit">Export Data</button>
+    </form>
+
+    <!-- 13. sheets_get_summary -->
+    <form toolname="sheets_get_summary" tooldescription="Get an analytical summary of non-empty cells, columns, and numeric totals" tooloutputschema='{"type":"object","properties":{"title":{"type":"string"},"sheet":{"type":"string"},"populatedCells":{"type":"number"},"numericCellsCount":{"type":"number"},"sumOfNumericCells":{"type":"number"},"averageOfNumericCells":{"type":"number"}},"required":["title","sheet","populatedCells"]}'>
+      <input type="text" name="sheet" placeholder="Sheet1" toolparamdescription="Optional worksheet tab name" />
+      <button type="submit">Get Summary</button>
     </form>
   </div>
 

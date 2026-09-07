@@ -57,8 +57,10 @@ export interface HistoryRecord {
 
 export interface WebMcpToolMetadata {
   name: string;
+  title?: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
   readOnly?: boolean;
 }
 

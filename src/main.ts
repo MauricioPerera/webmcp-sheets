@@ -11,32 +11,35 @@ import { MenuBar } from './ui/menu-bar';
 import { SheetTabs } from './ui/sheet-tabs';
 import { AgentDrawer } from './ui/agent-drawer';
 
-document.addEventListener('DOMContentLoaded', () => {
-  // 1. Core Services Initialization
-  const store = new CellStore();
-  const engine = new FormulaEngine(store);
-  const dag = new DependencyGraph(store, engine);
-  const io = new ImporterExporter(store);
-  const webmcp = new WebMcpService(store, engine, dag, io);
-  const router = new HtmxRouter(store, webmcp, io);
+// 1. Core Services Initialization (synchronous at module load so tools are ready for immediate crawler inspection)
+const store = new CellStore();
+const engine = new FormulaEngine(store);
+const dag = new DependencyGraph(store, engine);
+const io = new ImporterExporter(store);
+const webmcp = new WebMcpService(store, engine, dag, io);
+const router = new HtmxRouter(store, webmcp, io);
 
-  // 2. Load persisted workbook or populate sample demo data
-  const hasLoaded = store.loadFromLocalStorage();
-  if (!hasLoaded) {
-    populateSampleData(store, dag);
-  } else {
-    dag.recalculateAll();
-  }
+// 2. Load persisted workbook or populate sample demo data
+const hasLoaded = store.loadFromLocalStorage();
+if (!hasLoaded) {
+  populateSampleData(store, dag);
+} else {
+  dag.recalculateAll();
+}
 
-  // 3. UI Modules Initialization
+let gridInstance: SpreadsheetGrid | null = null;
+
+// 3. UI Initialization Routine
+function initUI(): void {
   const grid = new SpreadsheetGrid('grid-container', store, dag, io);
+  gridInstance = grid;
   const formulaBar = new FormulaBar('formula-bar-container', store, dag, grid);
   const toolbar = new Toolbar('toolbar-container', store, grid, dag);
   const menuBar = new MenuBar('menu-bar-container', store, io, grid, dag);
   const sheetTabs = new SheetTabs('sheet-tabs-container', store);
   const agentDrawer = new AgentDrawer('agent-drawer-container', webmcp, store, dag, grid);
 
-  // 4. Synchronize Grid with Formula Bar & Status Bar
+  // Synchronize Grid with Formula Bar & Status Bar
   grid.onSelectionChange((coord, range) => {
     formulaBar.updateActiveCell(coord);
     sheetTabs.updateSelectionStats(range);
@@ -46,39 +49,61 @@ document.addEventListener('DOMContentLoaded', () => {
     formulaBar.setInputValue(val);
   });
 
-  // 5. Connect Modal Actions (Find/Replace, CSV Import/Export)
+  // Connect Modal Actions (Find/Replace, CSV Import/Export)
   setupModalDelegations(store, dag, io, grid);
 
-  // 6. Connect Declarative WebMCP Form
-  const declarativeForm = document.querySelector('form[toolname="sheets_quick_entry"]') as HTMLFormElement;
-  if (declarativeForm) {
-    webmcp.defineDeclarativeTool(declarativeForm, {
-      name: 'sheets_quick_entry',
-      description: 'Fast entry of cell text or formula into active spreadsheet',
-      fields: [
-        { name: 'cell', description: 'Target cell coordinate' },
-        { name: 'value', description: 'Value or formula starting with =' },
-      ],
-    });
-
-    declarativeForm.addEventListener('submit', (e) => {
-      webmcp.respondToAgentSubmit(e, (evt: any) => {
-        const formData = new FormData(evt.target);
-        const cell = String(formData.get('cell') || 'A1');
-        const value = String(formData.get('value') || '');
-        store.setCellRaw(cell, value);
-        dag.updateCellDependencies(cell, value);
-        dag.recalculate(cell);
-        grid.render();
-        return { success: true, cell, value };
-      });
-    });
-  }
+  // Connect Declarative WebMCP Surface
+  setupDeclarativeTools(webmcp, store, dag, grid);
 
   // Initial update
   formulaBar.updateActiveCell(grid.getActiveCoord());
   sheetTabs.updateSelectionStats(grid.getSelectionRange());
-});
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initUI);
+  } else {
+    initUI();
+  }
+}
+
+function setupDeclarativeTools(
+  webmcp: WebMcpService,
+  store: CellStore,
+  dag: DependencyGraph,
+  grid: SpreadsheetGrid
+): void {
+  const surface = document.getElementById('declarative-webmcp-surface');
+  if (!surface) return;
+
+  const forms = surface.querySelectorAll('form[toolname]');
+  forms.forEach((formEl) => {
+    const form = formEl as HTMLFormElement;
+    const toolName = form.getAttribute('toolname');
+    if (!toolName) return;
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      webmcp.respondToAgentSubmit(e, async (evt: any) => {
+        const formData = new FormData(evt.target);
+        const args: Record<string, any> = {};
+        formData.forEach((val, key) => {
+          args[key] = val;
+        });
+
+        // Execute corresponding tool through WebMcpService
+        try {
+          const result = await webmcp.executeTool(toolName, args);
+          grid.render();
+          return result;
+        } catch (err: any) {
+          return { success: false, error: err.message || String(err) };
+        }
+      });
+    });
+  });
+}
 
 function populateSampleData(store: CellStore, dag: DependencyGraph): void {
   const sheet = store.getActiveSheet();
@@ -137,6 +162,7 @@ function setupModalDelegations(
 ): void {
   document.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
+    if (!target || typeof target.closest !== 'function') return;
 
     // Find & Replace Execute
     if (target.id === 'btn-do-replace') {

@@ -310,14 +310,14 @@ export class SpreadsheetGrid {
       const target = e.target as HTMLElement;
 
       // Fill handle drag
-      if (target.id === 'fill-handle') {
+      if (target && target.id === 'fill-handle') {
         e.preventDefault();
         this.isDraggingFill = true;
         return;
       }
 
       // Cell selection
-      const cell = target.closest('td.cell') as HTMLElement;
+      const cell = target && typeof target.closest === 'function' ? (target.closest('td.cell') as HTMLElement) : null;
       if (cell) {
         const col = parseInt(cell.dataset.col || '0', 10);
         const row = parseInt(cell.dataset.row || '0', 10);
@@ -338,7 +338,7 @@ export class SpreadsheetGrid {
     this.container.addEventListener('mousemove', (e) => {
       if (!this.isSelecting && !this.isDraggingFill) return;
       const target = e.target as HTMLElement;
-      const cell = target.closest('td.cell') as HTMLElement;
+      const cell = target && typeof target.closest === 'function' ? (target.closest('td.cell') as HTMLElement) : null;
       if (cell) {
         const col = parseInt(cell.dataset.col || '0', 10);
         const row = parseInt(cell.dataset.row || '0', 10);
@@ -357,7 +357,7 @@ export class SpreadsheetGrid {
     // Double click to edit cell
     this.container.addEventListener('dblclick', (e) => {
       const target = e.target as HTMLElement;
-      const cell = target.closest('td.cell') as HTMLElement;
+      const cell = target && typeof target.closest === 'function' ? (target.closest('td.cell') as HTMLElement) : null;
       if (cell) {
         this.startEditing();
       }
@@ -421,7 +421,7 @@ export class SpreadsheetGrid {
           e.preventDefault();
           this.toggleFormat('underline');
         }
-      } else if (e.key.length === 1 && !e.altKey) {
+      } else if (e.key && e.key.length === 1 && !e.altKey) {
         // Start typing directly into active cell
         this.startEditing(e.key);
       }
