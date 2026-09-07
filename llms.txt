@@ -1,0 +1,237 @@
+# WebMCP Sheets
+
+> Fully client-side Google Sheets clone with reactive formula calculation, DAG cycle detection, multi-sheet tabs, and 12 native WebMCP tools for autonomous AI agent pair programming and programmatic manipulation.
+
+WebMCP Sheets is a zero-latency, 100% in-browser spreadsheet application designed for seamless interoperability between human users and AI agents. It implements the WebMCP (Web Model Context Protocol) standard using FastWebMCP, exposing reactive spreadsheet tools directly to LLMs through browser automation, devtools, or browser agent extensions.
+
+- **Live Application**: https://mauricioperera.github.io/webmcp-sheets/
+- **Live llms.txt**: https://mauricioperera.github.io/webmcp-sheets/llms.txt
+- **Full Extended Specification**: https://mauricioperera.github.io/webmcp-sheets/llms-full.txt
+- **GitHub Repository**: https://github.com/MauricioPerera/webmcp-sheets
+- **Architecture**: Knowledge-Driven Development (KDD) with Open Knowledge Format (OKF) and Contract-Driven Development (CCDD).
+
+---
+
+## Agent Invocation Interface
+
+AI agents can inspect and control the spreadsheet directly from the page context using standard JavaScript promises:
+
+```javascript
+// Primary WebMCP runtime interface
+const result = await window.WebMCP.execute(toolName, args);
+
+// W3C Model Context draft standard
+const result = await navigator.modelContext.callTool(toolName, args);
+
+// Discover available tools
+const tools = window.WebMCP.getTools(); // or navigator.modelContext.listTools()
+
+// Retrieve execution audit logs
+const logs = window.WebMCP.getLogs();
+```
+
+---
+
+## Tool Catalog (12 WebMCP Tools)
+
+### 1. `sheets_get_cell`
+Get raw value, computed value, error state, and formatting of a specific cell.
+- **Access**: Read-Only
+- **Parameters**:
+  - `cell` (string, required): Coordinate reference, e.g. `"A1"` or `"Sheet1!B2"`.
+  - `sheet` (string, optional): Sheet tab name (defaults to active sheet).
+- **Returns**: `{ cell: string, sheet: string, raw: string, value: any, error: string | null, format: object }`
+- **Example**: `await window.WebMCP.execute('sheets_get_cell', { cell: 'B2' })`
+
+### 2. `sheets_set_cell`
+Set raw literal value or formula for a cell, with optional style formatting.
+- **Access**: Mutating (Triggers DAG recalculation)
+- **Parameters**:
+  - `cell` (string, required): Coordinate reference, e.g. `"A1"`.
+  - `value` (string, required): String literal or formula starting with `"="` (e.g. `"=SUM(A1:A10)"`).
+  - `sheet` (string, optional): Target sheet name.
+  - `format` (object, optional):
+    - `bold` (boolean)
+    - `italic` (boolean)
+    - `textColor` (string, hex/css)
+    - `bgColor` (string, hex/css)
+    - `align` (`"left"` | `"center"` | `"right"`)
+    - `numberFormat` (`"text"` | `"number"` | `"currency"` | `"percent"`)
+- **Returns**: `{ success: true, cell: string, value: any }`
+- **Example**: `await window.WebMCP.execute('sheets_set_cell', { cell: 'C1', value: '=A1*B1', format: { bold: true } })`
+
+### 3. `sheets_get_range`
+Retrieve values, formulas, and references for a 2D rectangular bounding box.
+- **Access**: Read-Only
+- **Parameters**:
+  - `range` (string, required): Range reference, e.g. `"A1:C10"` or `"Sheet2!A1:B5"`.
+  - `sheet` (string, optional): Target sheet name.
+- **Returns**: `{ range: string, sheet: string, matrix: Array<Array<{ ref: string, raw: string, value: any }>> }`
+- **Example**: `await window.WebMCP.execute('sheets_get_range', { range: 'A1:B5' })`
+
+### 4. `sheets_set_range`
+Batch inject a 2D matrix of values or formulas starting at a top-left cell.
+- **Access**: Mutating (Batch topological recalculation)
+- **Parameters**:
+  - `startCell` (string, required): Top-left coordinate, e.g. `"A1"`.
+  - `values` (string[][], required): 2D array of string literals or formulas.
+  - `sheet` (string, optional): Target sheet name.
+- **Returns**: `{ success: true, rowsUpdated: number }`
+- **Example**:
+```javascript
+await window.WebMCP.execute('sheets_set_range', {
+  startCell: 'A1',
+  values: [
+    ['Product', 'Qty', 'Price', 'Total'],
+    ['Widget', '10', '19.99', '=B2*C2'],
+    ['Gadget', '5', '49.99', '=B3*C3']
+  ]
+});
+```
+
+### 5. `sheets_evaluate_formula`
+Evaluate an arbitrary formula expression on the fly without writing to any cell.
+- **Access**: Read-Only
+- **Parameters**:
+  - `formula` (string, required): Formula string starting with `"="`, e.g. `"=SUM(10, 20, 30)"` or `"=VLOOKUP('Widget', A1:D10, 4, FALSE)"`.
+  - `sheet` (string, optional): Evaluation sheet context.
+- **Returns**: `{ formula: string, result: any, error: string | null }`
+- **Example**: `await window.WebMCP.execute('sheets_evaluate_formula', { formula: '=AVERAGE(A1:A50)' })`
+
+### 6. `sheets_clear_range`
+Wipe values, formulas, and formatting from a rectangular range.
+- **Access**: Mutating
+- **Parameters**:
+  - `range` (string, required): Range to wipe, e.g. `"B2:D10"`.
+  - `sheet` (string, optional): Target sheet name.
+- **Returns**: `{ success: true, clearedRange: string }`
+- **Example**: `await window.WebMCP.execute('sheets_clear_range', { range: 'B2:B10' })`
+
+### 7. `sheets_create_sheet`
+Add a new sheet tab to the workbook.
+- **Access**: Mutating
+- **Parameters**:
+  - `name` (string, required): Unique sheet tab name.
+- **Returns**: `{ success: true, sheetId: string, name: string }`
+- **Example**: `await window.WebMCP.execute('sheets_create_sheet', { name: 'Q4_Forecast' })`
+
+### 8. `sheets_delete_sheet`
+Delete a sheet tab from the workbook (refuses if only one sheet remains).
+- **Access**: Mutating
+- **Parameters**:
+  - `name` (string, required): Sheet name to remove.
+- **Returns**: `{ success: true, deleted: string }`
+- **Example**: `await window.WebMCP.execute('sheets_delete_sheet', { name: 'TempSheet' })`
+
+### 9. `sheets_list_sheets`
+List all sheet tabs in the workbook with cell counts and active indicator.
+- **Access**: Read-Only
+- **Parameters**: `{}`
+- **Returns**: `{ activeSheet: string, sheets: Array<{ id: string, name: string, cellCount: number }> }`
+- **Example**: `await window.WebMCP.execute('sheets_list_sheets')`
+
+### 10. `sheets_find_replace`
+Search and replace text or formula tokens across cells in a sheet.
+- **Access**: Mutating
+- **Parameters**:
+  - `find` (string, required): String or substring to search for.
+  - `replace` (string, required): Replacement string.
+  - `sheet` (string, optional): Target sheet name.
+  - `matchCase` (boolean, optional): Case-sensitive matching (default `false`).
+- **Returns**: `{ success: true, replacementsCount: number }`
+- **Example**: `await window.WebMCP.execute('sheets_find_replace', { find: 'Widget', replace: 'SuperWidget' })`
+
+### 11. `sheets_export_data`
+Export spreadsheet contents as structured CSV or full JSON backup.
+- **Access**: Read-Only
+- **Parameters**:
+  - `format` (`"csv"` | `"json"`, required): Output serialization format.
+  - `sheet` (string, optional): Target sheet name for CSV export.
+- **Returns**: `{ format: string, data: string }`
+- **Example**: `await window.WebMCP.execute('sheets_export_data', { format: 'csv' })`
+
+### 12. `sheets_get_summary`
+Retrieve an analytical summary of non-empty cells, numeric counts, sum, and average.
+- **Access**: Read-Only
+- **Parameters**:
+  - `sheet` (string, optional): Target sheet name.
+- **Returns**: `{ title: string, sheet: string, populatedCells: number, numericCellsCount: number, sumOfNumericCells: number, averageOfNumericCells: number }`
+- **Example**: `await window.WebMCP.execute('sheets_get_summary')`
+
+---
+
+## Formula Calculation Engine
+
+The spreadsheet engine parses formula expressions using recursive descent tokenization and shunting-yard operator precedence.
+
+### Operators & Precedence
+1. Comparison: `=`, `<>`, `<`, `>`, `<=`, `>=` (Precedence 1)
+2. Concatenation: `&` (Precedence 2)
+3. Addition & Subtraction: `+`, `-` (Precedence 3)
+4. Multiplication, Division & Modulo: `*`, `/`, `%` (Precedence 4)
+5. Exponentiation: `^` (Right-associative, Precedence 5)
+
+### Built-in Functions Catalog
+- **Math & Statistics**: `SUM`, `AVERAGE`, `MIN`, `MAX`, `COUNT`, `COUNTA`, `COUNTBLANK`, `PRODUCT`, `ABS`, `ROUND`, `ROUNDUP`, `ROUNDDOWN`, `MOD`, `POWER`, `SQRT`, `INT`, `MEDIAN`
+- **Logical**: `IF(cond, true_val, false_val)`, `IFS(cond1, val1, cond2, val2, ...)`, `AND(...)`, `OR(...)`, `NOT(...)`, `ISBLANK(...)`, `ISNUMBER(...)`, `ISTEXT(...)`
+- **Text**: `CONCAT(...)`, `CONCATENATE(...)`, `TEXTJOIN(delim, ignore_empty, ...)`, `UPPER(str)`, `LOWER(str)`, `PROPER(str)`, `TRIM(str)`, `LEN(str)`, `LEFT(str, n)`, `RIGHT(str, n)`, `MID(str, start, len)`
+- **Lookup & Reference**: `VLOOKUP(val, range, colIndex, [isExact])`, `INDEX(range, row, col)`, `MATCH(val, range)`
+- **Date & Time**: `TODAY()`, `NOW()`, `YEAR(date)`, `MONTH(date)`, `DAY(date)`
+
+### Standard Error Constants
+- `#DIV/0!`: Division or modulo by zero; empty range in `AVERAGE`.
+- `#NAME?`: Unrecognized function identifier.
+- `#ERROR!`: Syntax error or unparseable formula.
+- `#VALUE!`: Incompatible types for arithmetic operations.
+- `#NUM!`: Math boundary violation (e.g. `SQRT(-1)`).
+- `#N/A`: Lookup target not found in `VLOOKUP`, `MATCH`, or unsatisfied `IFS`.
+- `#REF!`: Cell coordinate or sheet reference does not exist.
+- `#CYCLE!`: Circular reference detected by Directed Acyclic Graph (DAG) cycle validator.
+
+---
+
+## Multi-Sheet & Range Referencing
+
+- **Single Cell Reference**: `A1`, `Z100`
+- **2D Range Reference**: `A1:C10`
+- **Cross-Sheet Reference**: `Sheet2!B5` or `'Q4 Forecast'!A1:D20`
+
+---
+
+## Agent Usage Recipes
+
+### Recipe 1: Financial Model Generation
+```javascript
+// 1. Create a dedicated sheet
+await window.WebMCP.execute('sheets_create_sheet', { name: 'P&L' });
+
+// 2. Populate structure with batch set range
+await window.WebMCP.execute('sheets_set_range', {
+  sheet: 'P&L',
+  startCell: 'A1',
+  values: [
+    ['Metric', 'Q1', 'Q2', 'Q3', 'Q4', 'Total'],
+    ['Revenue', '10000', '12000', '15000', '18000', '=SUM(B2:E2)'],
+    ['COGS', '4000', '4800', '6000', '7200', '=SUM(B3:E3)'],
+    ['Gross Profit', '=B2-B3', '=C2-C3', '=D2-D3', '=E2-E3', '=SUM(B4:E4)']
+  ]
+});
+
+// 3. Inspect summary
+const summary = await window.WebMCP.execute('sheets_get_summary', { sheet: 'P&L' });
+```
+
+### Recipe 2: Analytical Data Inspection & Cleaning
+```javascript
+// 1. Scan range for anomalies or errors
+const rangeData = await window.WebMCP.execute('sheets_get_range', { range: 'A1:E20' });
+
+// 2. Perform automated find and replace
+await window.WebMCP.execute('sheets_find_replace', {
+  find: 'N/A',
+  replace: '0'
+});
+
+// 3. Export clean data
+const csvExport = await window.WebMCP.execute('sheets_export_data', { format: 'csv' });
+```
