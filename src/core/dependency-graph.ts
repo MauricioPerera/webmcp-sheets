@@ -50,6 +50,11 @@ export class DependencyGraph {
     if (this.detectCycle(key, newDeps)) {
       // Set cycle error on the cell
       this.store.setCell(cellRef, { error: '#CYCLE!', computed: '#CYCLE!' }, sheetId, false);
+      const affected = this.getTransitiveDependents(key);
+      for (const aff of affected) {
+        const { ref: affRef, targetSheetId } = this.denormalizeRef(aff);
+        this.store.setCell(affRef, { error: '#CYCLE!', computed: '#CYCLE!' }, targetSheetId, false);
+      }
       return { hasCycle: true };
     }
 
@@ -100,6 +105,11 @@ export class DependencyGraph {
    * Re-evaluates target cell and cascades recomputation downstream in topological order.
    */
   public recalculate(startCellRef: string, sheetId?: string): void {
+    const startCell = this.store.getCell(startCellRef, sheetId);
+    if (startCell?.error === '#CYCLE!') {
+      return;
+    }
+
     const startKey = this.normalizeRef(startCellRef, sheetId);
 
     // 1. Evaluate the starter cell itself
@@ -141,6 +151,7 @@ export class DependencyGraph {
   private evaluateSingleCell(cellRef: string, sheetId?: string): void {
     const cell = this.store.getCell(cellRef, sheetId);
     if (!cell) return;
+    if (cell.error === '#CYCLE!') return;
 
     if (cell.raw.startsWith('=')) {
       const { value, error } = this.engine.evaluate(cell.raw, sheetId);

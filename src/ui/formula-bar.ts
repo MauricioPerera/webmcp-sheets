@@ -109,8 +109,10 @@ export class FormulaBar {
     const val = this.input.value;
     const ref = coordsToRef(this.activeCoord.col, this.activeCoord.row);
     this.store.setCellRaw(ref, val);
-    this.dag.updateCellDependencies(ref, val);
-    this.dag.recalculate(ref);
+    const { hasCycle } = this.dag.updateCellDependencies(ref, val);
+    if (!hasCycle) {
+      this.dag.recalculate(ref);
+    }
     this.grid.render();
   }
 

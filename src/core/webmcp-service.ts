@@ -167,8 +167,10 @@ export class WebMcpService {
 
         const ref = coordsToRef(parsed.col, parsed.row);
         this.store.setCell(ref, { raw: value, format: format as any }, targetSheet.id);
-        this.dag.updateCellDependencies(ref, value, targetSheet.id);
-        this.dag.recalculate(ref, targetSheet.id);
+        const { hasCycle } = this.dag.updateCellDependencies(ref, value, targetSheet.id);
+        if (!hasCycle) {
+          this.dag.recalculate(ref, targetSheet.id);
+        }
 
         const updated = this.store.getCell(ref, targetSheet.id);
         return {
