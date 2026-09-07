@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Spreadsheet Grid Customizations */
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  user-select: none;
+}
+
+#grid-container {
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+#grid-container::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+#grid-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+#grid-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+#grid-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Cell hover and cursor */
+td.cell {
+  position: relative;
+}
+
+td.cell:focus {
+  outline: none;
+}
+
+/* Fill handle cursor */
+#fill-handle {
+  cursor: crosshair;
+}
+
+/* Custom transitions */
+.drawer-transition {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}

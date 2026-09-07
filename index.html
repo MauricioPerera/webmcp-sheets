@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Google Sheets WebMCP — 100% Client-Side Spreadsheet</title>
+  
+  <!-- Tailwind CSS via CDN for instant GitHub Pages styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- HTMX for declarative hypermedia workflows -->
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+
+  <!-- Google Fonts: Roboto & Roboto Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="./src/style.css" />
+</head>
+<body class="h-screen w-screen flex flex-col bg-white overflow-hidden select-none text-gray-800">
+
+  <!-- 1. Top Ribbon Menu Bar -->
+  <header id="menu-bar-container" class="flex-shrink-0 z-30"></header>
+
+  <!-- 2. Formatting & Actions Toolbar -->
+  <section id="toolbar-container" class="flex-shrink-0 z-20"></section>
+
+  <!-- 3. Formula Bar -->
+  <section id="formula-bar-container" class="flex-shrink-0 z-10"></section>
+
+  <!-- 4. Main Spreadsheet Grid (Virtualized/Scrollable) -->
+  <main id="grid-container" class="flex-1 overflow-auto relative bg-gray-100"></main>
+
+  <!-- 5. Bottom Sheets Tabs & Status Bar -->
+  <footer id="sheet-tabs-container" class="flex-shrink-0 z-20"></footer>
+
+  <!-- 6. WebMCP AI Agent Sidecar Drawer -->
+  <aside id="agent-drawer-container" class="fixed top-0 right-0 bottom-0 z-50 transform translate-x-full drawer-transition"></aside>
+
+  <!-- 7. Dynamic Modal Container for HTMX Swaps -->
+  <div id="modal-container"></div>
+
+  <!-- 8. Declarative WebMCP Forms (Autonomous Agent Discovery Surface) -->
+  <div id="declarative-webmcp-surface" class="sr-only">
+    <form toolname="sheets_quick_entry" tooldescription="Fast entry of cell text or formula into active spreadsheet">
+      <input type="text" name="cell" toolparamdescription="Target cell coordinate, e.g. A1" />
+      <input type="text" name="value" toolparamdescription="Value or formula starting with '='" />
+      <button type="submit">Submit to sheet</button>
+    </form>
+  </div>
+
+  <!-- Main Application Bootstrap -->
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

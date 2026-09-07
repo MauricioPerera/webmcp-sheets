@@ -1,0 +1,27 @@
+{
+  "name": "webmcp-sheets",
+  "version": "1.0.0",
+  "description": "A 100% functional client-side Google Sheets clone deployable to GitHub Pages, governed by KDD with FastWebMCP and HTMX.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "kdd:contracts": "python scripts/validate_contracts.py knowledge/contracts",
+    "kdd:okf": "python scripts/validate_okf.py knowledge",
+    "kdd:lint": "python scripts/lint_ascii.py scripts",
+    "kdd:validate": "npm run kdd:contracts && npm run kdd:okf && npm run kdd:lint && npm test"
+  },
+  "dependencies": {
+    "fastwebmcp": "^0.4.2",
+    "htmx.org": "^2.0.4",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.0",
+    "vitest": "^3.0.7"
+  }
+}
