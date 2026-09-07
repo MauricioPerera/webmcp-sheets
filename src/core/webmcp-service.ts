@@ -150,9 +150,21 @@ export class WebMcpService {
           raw: { type: 'string' },
           value: { type: ['string', 'number', 'boolean', 'null'] },
           error: { type: ['string', 'null'] },
-          format: { type: 'object' },
+          format: {
+            type: 'object',
+            properties: {
+              bold: { type: 'boolean' },
+              italic: { type: 'boolean' },
+              textColor: { type: 'string' },
+              bgColor: { type: 'string' },
+              align: { type: 'string', enum: ['left', 'center', 'right'] },
+              numberFormat: { type: 'string', enum: ['text', 'number', 'currency', 'percent'] },
+            },
+            additionalProperties: false,
+          },
         },
         required: ['cell', 'sheet', 'raw', 'value'],
+        additionalProperties: false,
       },
       readOnly: true,
       execute: async ({ cell, sheet }) => {
@@ -292,9 +304,26 @@ export class WebMcpService {
         properties: {
           range: { type: 'string' },
           sheet: { type: 'string' },
-          matrix: { type: 'array' },
+          matrix: {
+            type: 'array',
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  ref: { type: 'string' },
+                  raw: { type: 'string' },
+                  value: { type: ['string', 'number', 'boolean', 'null'] },
+                },
+                required: ['ref', 'raw', 'value'],
+                additionalProperties: false,
+              },
+            },
+            description: '2D array of rows containing cells with ref, raw, and computed values',
+          },
         },
         required: ['range', 'sheet', 'matrix'],
+        additionalProperties: false,
       },
       readOnly: true,
       execute: async ({ range, sheet }) => {
@@ -565,9 +594,23 @@ export class WebMcpService {
         type: 'object',
         properties: {
           activeSheet: { type: 'string' },
-          sheets: { type: 'array' },
+          sheets: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                name: { type: 'string' },
+                cellCount: { type: 'number' },
+              },
+              required: ['id', 'name', 'cellCount'],
+              additionalProperties: false,
+            },
+            description: 'List of worksheets with ID, name, and cell count',
+          },
         },
         required: ['activeSheet', 'sheets'],
+        additionalProperties: false,
       },
       readOnly: true,
       execute: async () => {
@@ -758,60 +801,6 @@ export class WebMcpService {
       },
     });
 
-    // 13. sheets_quick_entry (Convenience tool)
-    this.addTool({
-      name: 'sheets_quick_entry',
-      title: 'Quick Entry to Active Sheet',
-      description: 'Fast entry of cell text or formula into active spreadsheet.',
-      schema: z.object({
-        cell: z.string().regex(/^([A-Za-z0-9_]+!)?[A-Za-z]+[1-9][0-9]*$/, 'Invalid cell format. Must be in A1 notation (e.g. A1, B2)'),
-        value: z.string().describe('Value or formula starting with "="'),
-      }),
-      inputSchema: {
-        $schema: 'https://json-schema.org/draft/2020-12/schema',
-        type: 'object',
-        properties: {
-          cell: {
-            type: 'string',
-            pattern: '^([A-Za-z0-9_]+!)?[A-Za-z]+[1-9][0-9]*$',
-            description: 'Target cell coordinate in standard A1 notation, e.g. "A1" or "B5"',
-          },
-          value: {
-            type: 'string',
-            description: 'Literal text, number, or formula starting with "=" (e.g. "100" or "=SUM(A1:A5)")',
-          },
-        },
-        required: ['cell', 'value'],
-        additionalProperties: false,
-      },
-      outputSchema: {
-        $schema: 'https://json-schema.org/draft/2020-12/schema',
-        type: 'object',
-        properties: {
-          success: { type: 'boolean' },
-          cell: { type: 'string' },
-          value: { type: ['string', 'number', 'boolean', 'null'] },
-        },
-        required: ['success', 'cell'],
-      },
-      readOnly: false,
-      execute: async ({ cell, value }) => {
-        const parsed = parseCellRef(cell);
-        const targetSheet = this.store.getActiveSheet();
-        const ref = coordsToRef(parsed.col, parsed.row);
-        this.store.setCellRaw(ref, value, targetSheet.id, true);
-        const { hasCycle } = this.dag.updateCellDependencies(ref, value, targetSheet.id);
-        if (!hasCycle) {
-          this.dag.recalculate(ref, targetSheet.id);
-        }
-        const updated = this.store.getCell(ref, targetSheet.id);
-        return {
-          success: true,
-          cell: ref,
-          value: updated?.computed !== undefined ? updated.computed : updated?.raw,
-        };
-      },
-    });
   }
 
   private addTool(record: InternalToolRecord): void {

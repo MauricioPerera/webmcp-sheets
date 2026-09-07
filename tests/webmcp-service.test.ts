@@ -20,9 +20,9 @@ describe('WebMcpService (FastWebMCP & webmcp.com standards)', () => {
     webmcp = new WebMcpService(store, engine, dag, io);
   });
 
-  it('registers all 12 core WebMCP spreadsheet tools plus quick entry', () => {
+  it('registers all 12 core non-overlapping WebMCP spreadsheet tools', () => {
     const tools = webmcp.getRegisteredTools();
-    expect(tools.length).toBe(13);
+    expect(tools.length).toBe(12);
 
     const toolNames = tools.map((t) => t.name);
     expect(toolNames).toContain('sheets_get_cell');
@@ -37,7 +37,6 @@ describe('WebMcpService (FastWebMCP & webmcp.com standards)', () => {
     expect(toolNames).toContain('sheets_find_replace');
     expect(toolNames).toContain('sheets_export_data');
     expect(toolNames).toContain('sheets_get_summary');
-    expect(toolNames).toContain('sheets_quick_entry');
   });
 
   it('executes sheets_set_cell and sheets_get_cell', async () => {

@@ -13,7 +13,7 @@ budget:
   nesting_max: 5
   lines_max: 600
 tests: tests/webmcp-service.test.ts
-tests_sha256: 2b74b6486247a3cae96e68c2b29a8e5f5552975fd4696de2dc8fc366544ed561
+tests_sha256: 3280fc8db778c5095be0227d82e301cfafd89c78221121eebcf25443a6282011
 deps_allowed: ['zod', 'fastwebmcp']
 touch_only: ['src/core/webmcp-service.ts']
 forbids: ['eval', 'unvalidated-arguments']

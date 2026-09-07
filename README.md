@@ -65,7 +65,7 @@ A 100% functional, responsive **Google Sheets** clone deployable directly to **G
   12. `sheets_get_summary({ sheet })`
 - Browser-native `navigator.modelContext` support with automatic fallback polyfill.
 - Built-in **WebMCP AI Agent Console**: An interactive drawer to test directives (e.g. "Generate monthly budget", "Format headers", "Calculate column totals") and view real-time tool execution logs.
-- Declarative `<form toolname="sheets_quick_entry">` integration.
+- Declarative `<form toolname="...">` autonomous discovery surface for browser crawlers and LLM agents.
 
 ---
 
