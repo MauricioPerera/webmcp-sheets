@@ -1,45 +1,801 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es" class="scroll-smooth">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Google Sheets WebMCP — 100% Client-Side Spreadsheet</title>
+  <title>WebMCP Sheets — Hoja de Cálculo 100% Client-Side con Soporte WebMCP para IA</title>
+  <meta name="description" content="Clon moderno y ultraligero de Google Sheets ejecutado 100% en el cliente con Tailwind CSS, HTMX y el protocolo WebMCP (W3C) para interacción de agentes de IA." />
   
-  <!-- Tailwind CSS via CDN for instant GitHub Pages styling -->
+  <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- HTMX for declarative hypermedia workflows -->
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 
-  <!-- Google Fonts: Roboto & Roboto Mono -->
+  <!-- Google Fonts: Inter & Roboto Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="./src/style.css" />
+  <style>
+    body { font-family: "Inter", sans-serif; }
+    code, pre, .font-mono { font-family: "Roboto Mono", monospace; }
+    .glass-panel {
+      background: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .hero-glow {
+      background: radial-gradient(circle at 50% 30%, rgba(16, 185, 129, 0.15), transparent 70%);
+    }
+  </style>
 </head>
-<body class="h-screen w-screen flex flex-col bg-white overflow-hidden select-none text-gray-800">
+<body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col selection:bg-emerald-500 selection:text-white">
 
-  <!-- 1. Top Ribbon Menu Bar -->
-  <header id="menu-bar-container" class="flex-shrink-0 z-30"></header>
+  <!-- ================= HEADER / NAVBAR ================= -->
+  <header class="sticky top-0 z-50 glass-panel border-b border-gray-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="./index.html" class="flex items-center gap-2.5 group">
+        <div class="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-600/30 group-hover:scale-105 transition">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 7h4v2H7zm0 4h4v2H7zm0 4h4v2H7zm6-8h4v2h-4zm0 4h4v2h-4zm0 4h4v2h-4z"/>
+          </svg>
+        </div>
+        <div class="flex flex-col">
+          <span class="font-bold text-base tracking-tight text-white flex items-center gap-1.5">
+            WebMCP Sheets
+            <span class="text-[10px] uppercase tracking-wider bg-emerald-500/20 text-emerald-400 font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">Client-Side</span>
+          </span>
+        </div>
+      </a>
 
-  <!-- 2. Formatting & Actions Toolbar -->
-  <section id="toolbar-container" class="flex-shrink-0 z-20"></section>
+      <!-- Desktop Nav -->
+      <nav class="hidden md:flex items-center gap-6 text-sm text-gray-300 font-medium">
+        <a href="#features" class="hover:text-emerald-400 transition">Características</a>
+        <a href="#webmcp" class="hover:text-emerald-400 transition">Protocolo WebMCP</a>
+        <a href="#formulas" class="hover:text-emerald-400 transition">Fórmulas (30+)</a>
+        <a href="#architecture" class="hover:text-emerald-400 transition">Arquitectura KDD</a>
+        <a href="./llms.txt" target="_blank" class="flex items-center gap-1 hover:text-emerald-400 transition">
+          <span class="text-xs bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded font-mono">llms.txt</span>
+        </a>
+        <a href="https://github.com/MauricioPerera/webmcp-sheets" target="_blank" rel="noopener" class="text-gray-400 hover:text-white transition" title="Ver en GitHub">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+        </a>
+      </nav>
 
-  <!-- 3. Formula Bar -->
-  <section id="formula-bar-container" class="flex-shrink-0 z-10"></section>
+      <!-- Primary CTA -->
+      <div class="flex items-center gap-3">
+        <a
+          href="./app.html"
+          class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-lg shadow-emerald-600/30 hover:shadow-emerald-500/40 transition transform hover:-translate-y-0.5 active:translate-y-0"
+        >
+          <span>Abrir Sheets</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
 
-  <!-- 4. Main Spreadsheet Grid (Virtualized/Scrollable) -->
-  <main id="grid-container" class="flex-1 overflow-auto relative bg-gray-100"></main>
+  <!-- ================= HERO SECTION ================= -->
+  <section class="relative overflow-hidden hero-glow pt-16 pb-20 lg:pt-24 lg:pb-28">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+      
+      <!-- Pill Badge -->
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 text-xs font-semibold mb-6 shadow-inner">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>100% Client-Side · W3C WebMCP Standard · Cero Servidores</span>
+      </div>
 
-  <!-- 5. Bottom Sheets Tabs & Status Bar -->
-  <footer id="sheet-tabs-container" class="flex-shrink-0 z-20"></footer>
+      <!-- Headline -->
+      <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight sm:leading-tight">
+        La Hoja de Cálculo WebMCP para
+        <span class="bg-gradient-to-r from-emerald-400 via-teal-300 to-green-400 bg-clip-text text-transparent">Humanos y Agentes de IA</span>
+      </h1>
 
-  <!-- 6. WebMCP AI Agent Sidecar Drawer -->
-  <aside id="agent-drawer-container" class="fixed top-0 right-0 bottom-0 z-50 transform translate-x-full drawer-transition"></aside>
+      <!-- Subtitle -->
+      <p class="mt-6 text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
+        Un clon ultraligero y de alto rendimiento de Google Sheets impulsado por <strong class="text-gray-200">Tailwind CSS</strong>, <strong class="text-gray-200">HTMX</strong> y el protocolo <strong class="text-gray-200">WebMCP</strong>. Diseñado para que usuarios y LLMs (Claude, Gemini, GPT) lean, escriban y formulen datos en tiempo real sin salir del navegador.
+      </p>
 
-  <!-- 7. Dynamic Modal Container for HTMX Swaps -->
-  <div id="modal-container"></div>
+      <!-- CTA Buttons -->
+      <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
+        <a
+          href="./app.html"
+          class="inline-flex items-center gap-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-base font-semibold px-6 py-3.5 rounded-xl shadow-xl shadow-emerald-600/30 hover:shadow-emerald-500/40 transition transform hover:-translate-y-0.5 active:translate-y-0"
+        >
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 7h4v2H7zm0 4h4v2H7zm0 4h4v2H7zm6-8h4v2h-4zm0 4h4v2h-4zm0 4h4v2h-4z"/>
+          </svg>
+          <span>Lanzar Hoja de Cálculo</span>
+        </a>
+
+        <a
+          href="./llms.txt"
+          target="_blank"
+          class="inline-flex items-center gap-2 glass-panel hover:bg-gray-800/80 text-gray-200 text-base font-semibold px-6 py-3.5 rounded-xl border border-gray-700 hover:border-emerald-500/50 transition"
+        >
+          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Ver Spec (llms.txt)</span>
+        </a>
+
+        <a
+          href="https://github.com/MauricioPerera/webmcp-sheets"
+          target="_blank"
+          rel="noopener"
+          class="inline-flex items-center gap-2 glass-panel hover:bg-gray-800/80 text-gray-400 hover:text-white text-base font-medium px-5 py-3.5 rounded-xl border border-gray-800 hover:border-gray-700 transition"
+        >
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          <span>GitHub</span>
+        </a>
+      </div>
+
+      <!-- ================= INTERACTIVE HERO PLAYGROUND ================= -->
+      <div class="mt-14 max-w-5xl mx-auto text-left">
+        <div class="glass-panel rounded-2xl border border-gray-800 p-4 sm:p-6 shadow-2xl relative overflow-hidden">
+          
+          <!-- Mock Header Bar -->
+          <div class="flex items-center justify-between pb-4 mb-4 border-b border-gray-800">
+            <div class="flex items-center gap-2">
+              <div class="flex gap-1.5">
+                <span class="w-3 h-3 rounded-full bg-red-500/80"></span>
+                <span class="w-3 h-3 rounded-full bg-yellow-500/80"></span>
+                <span class="w-3 h-3 rounded-full bg-green-500/80"></span>
+              </div>
+              <span class="text-xs text-gray-400 font-mono ml-2">Live Spreadsheet Engine & WebMCP Probe</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-mono border border-emerald-500/20">Reactive DAG Active</span>
+              <a href="./app.html" class="text-xs text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1">
+                Abrir app completa &rarr;
+              </a>
+            </div>
+          </div>
+
+          <!-- Formula Interactive Bar -->
+          <div class="bg-gray-900/90 rounded-xl p-3 border border-gray-800 mb-4">
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+              <div class="flex items-center gap-2 w-full sm:w-auto">
+                <span class="font-mono text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded">fx</span>
+                <input
+                  id="hero-formula-input"
+                  type="text"
+                  value="=SUM(120, 280, 450) * 1.16"
+                  class="bg-gray-950 text-emerald-300 font-mono text-sm px-3 py-1.5 rounded border border-gray-700 focus:border-emerald-500 focus:outline-none w-full sm:w-96"
+                  placeholder="Ingresa una fórmula, ej: =SUM(10, 20)"
+                />
+              </div>
+              <button
+                id="hero-eval-btn"
+                class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition"
+              >
+                Evaluar Expresión
+              </button>
+              <div class="flex items-center gap-2 ml-auto">
+                <span class="text-xs text-gray-400 font-mono">Resultado:</span>
+                <span id="hero-eval-result" class="text-emerald-400 font-mono font-bold text-lg">986</span>
+              </div>
+            </div>
+
+            <!-- Preset Chips -->
+            <div class="mt-3 flex flex-wrap items-center gap-2 pt-2 border-t border-gray-800/80 text-xs">
+              <span class="text-gray-500 text-[11px]">Ejemplos rápidos:</span>
+              <button class="formula-chip bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-0.5 rounded font-mono text-[11px] transition" data-formula="=SUM(100, 200, 300) / 2">=SUM(100,200,300)/2</button>
+              <button class="formula-chip bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-0.5 rounded font-mono text-[11px] transition" data-formula='=IF(500 > 300, "Rentable", "Déficit")'>=IF(500>300,"Rentable","Déficit")</button>
+              <button class="formula-chip bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-0.5 rounded font-mono text-[11px] transition" data-formula='=CONCATENATE("WebMCP", " ", "v1.0")'>=CONCATENATE("WebMCP"," ","v1.0")</button>
+              <button class="formula-chip bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-0.5 rounded font-mono text-[11px] transition" data-formula="=SQRT(144) * 10">=SQRT(144)*10</button>
+            </div>
+          </div>
+
+          <!-- Preview Grid Showcase -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            
+            <!-- Mini Grid Mockup (Col 1 & 2) -->
+            <div class="lg:col-span-2 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden text-xs">
+              <div class="bg-gray-800/80 px-3 py-1.5 flex items-center justify-between text-gray-400 font-mono text-[11px] border-b border-gray-700/50">
+                <span>Worksheet: Hoja1</span>
+                <span class="text-emerald-400">● DAG: 0 ciclos detectados</span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left font-mono border-collapse">
+                  <thead>
+                    <tr class="bg-gray-800/40 text-gray-400 border-b border-gray-800">
+                      <th class="w-10 p-2 text-center border-r border-gray-800">#</th>
+                      <th class="p-2 border-r border-gray-800">A (Categoría)</th>
+                      <th class="p-2 border-r border-gray-800">B (Monto USD)</th>
+                      <th class="p-2 border-r border-gray-800">C (IVA 16%)</th>
+                      <th class="p-2">D (Total Fórmula)</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-800 text-gray-300">
+                    <tr class="hover:bg-gray-800/30">
+                      <td class="p-2 text-center text-gray-500 bg-gray-800/20 border-r border-gray-800">1</td>
+                      <td class="p-2 border-r border-gray-800 font-sans font-medium text-white">Suscripción Cloud</td>
+                      <td class="p-2 border-r border-gray-800 text-right">120.00</td>
+                      <td class="p-2 border-r border-gray-800 text-right text-gray-400">=B1*0.16</td>
+                      <td class="p-2 text-right text-emerald-400 font-semibold">139.20</td>
+                    </tr>
+                    <tr class="hover:bg-gray-800/30">
+                      <td class="p-2 text-center text-gray-500 bg-gray-800/20 border-r border-gray-800">2</td>
+                      <td class="p-2 border-r border-gray-800 font-sans font-medium text-white">Infraestructura IA</td>
+                      <td class="p-2 border-r border-gray-800 text-right">280.00</td>
+                      <td class="p-2 border-r border-gray-800 text-right text-gray-400">=B2*0.16</td>
+                      <td class="p-2 text-right text-emerald-400 font-semibold">324.80</td>
+                    </tr>
+                    <tr class="hover:bg-gray-800/30">
+                      <td class="p-2 text-center text-gray-500 bg-gray-800/20 border-r border-gray-800">3</td>
+                      <td class="p-2 border-r border-gray-800 font-sans font-medium text-white">Dominios & CDN</td>
+                      <td class="p-2 border-r border-gray-800 text-right">450.00</td>
+                      <td class="p-2 border-r border-gray-800 text-right text-gray-400">=B3*0.16</td>
+                      <td class="p-2 text-right text-emerald-400 font-semibold">522.00</td>
+                    </tr>
+                    <tr class="bg-emerald-950/20 font-bold text-white">
+                      <td class="p-2 text-center text-gray-500 bg-gray-800/20 border-r border-gray-800">4</td>
+                      <td class="p-2 border-r border-gray-800 font-sans">TOTAL PRESUPUESTO</td>
+                      <td class="p-2 border-r border-gray-800 text-right text-emerald-300">=SUM(B1:B3)</td>
+                      <td class="p-2 border-r border-gray-800 text-right text-emerald-300">=SUM(C1:C3)</td>
+                      <td class="p-2 text-right text-emerald-400 font-bold text-sm">=SUM(D1:D3)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- WebMCP Agent Live Log Mockup (Col 3) -->
+            <div class="bg-gray-900 rounded-xl border border-gray-800 p-3.5 flex flex-col justify-between text-xs">
+              <div>
+                <div class="flex items-center justify-between pb-2 mb-2 border-b border-gray-800">
+                  <span class="font-semibold text-gray-200 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    WebMCP AI Sidecar
+                  </span>
+                  <span class="text-[10px] text-gray-400 font-mono">12 Tools Active</span>
+                </div>
+                <p class="text-gray-400 text-[11px] leading-relaxed">
+                  Cualquier agente LLM puede invocar herramientas directamente vía <code class="text-emerald-400">navigator.modelContext</code> o <code class="text-emerald-400">window.WebMCP</code>.
+                </p>
+                <div class="mt-3 bg-gray-950 p-2.5 rounded-lg border border-gray-800 font-mono text-[11px] text-gray-300">
+                  <span class="text-gray-500">// Llamada de agente:</span><br/>
+                  <span class="text-purple-400">await</span> WebMCP.execute(<span class="text-emerald-300">'sheets_evaluate_formula'</span>, {<br/>
+                  &nbsp;&nbsp;formula: <span class="text-amber-300">'=SUM(120, 280, 450) * 1.16'</span><br/>
+                  });
+                </div>
+              </div>
+
+              <div class="mt-3 pt-3 border-t border-gray-800 flex items-center justify-between">
+                <button
+                  id="webmcp-probe-btn"
+                  class="bg-gray-800 hover:bg-emerald-600 text-gray-200 hover:text-white px-3 py-1.5 rounded text-[11px] font-medium transition flex items-center gap-1"
+                >
+                  <span>Probar Tool en Vivo</span>
+                </button>
+                <a href="./app.html" class="text-emerald-400 hover:underline text-[11px] font-medium">
+                  Abrir Consola IA &rarr;
+                </a>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- WebMCP Probe Output Area -->
+          <div class="mt-4 pt-3 border-t border-gray-800/80">
+            <div class="flex items-center justify-between mb-1 text-[11px] text-gray-400 font-mono">
+              <span>WebMCP Execution Log / Response Output:</span>
+            </div>
+            <pre id="webmcp-probe-output" class="bg-gray-950 p-3 rounded-lg border border-gray-800/80 text-xs font-mono text-emerald-400 overflow-x-auto max-h-32">{
+  "status": "ready",
+  "protocol": "W3C WebMCP Draft / FastWebMCP",
+  "toolsAvailable": 12,
+  "clientSide": true
+}</pre>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= FEATURES GRID ================= -->
+  <section id="features" class="py-20 bg-gray-900/50 border-t border-gray-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-xs uppercase tracking-widest text-emerald-400 font-semibold">Arquitectura de Próxima Generación</h2>
+        <p class="mt-2 text-3xl sm:text-4xl font-bold text-white tracking-tight">
+          Potencia de Google Sheets con la Libertad del Cliente
+        </p>
+        <p class="mt-4 text-base text-gray-400">
+          Diseñado bajo los estándares más estrictos de Knowledge-Driven Development (KDD) y el protocolo WebMCP.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        
+        <!-- Feature 1 -->
+        <div class="glass-panel p-6 rounded-2xl border border-gray-800 hover:border-emerald-500/40 transition group">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-5 group-hover:scale-110 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Motor Reactivo DAG</h3>
+          <p class="text-sm text-gray-400 leading-relaxed">
+            Grafo Acíclico Dirigido que detecta referencias circulares recursivas (<code class="text-emerald-400">#CYCLE!</code>), actualiza dependencias topológicas en milisegundos y soporta referencias cruzadas entre hojas.
+          </p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="glass-panel p-6 rounded-2xl border border-gray-800 hover:border-emerald-500/40 transition group">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-5 group-hover:scale-110 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">12 Herramientas WebMCP</h3>
+          <p class="text-sm text-gray-400 leading-relaxed">
+            Superficie imperativa y declarativa compatible con W3C WebMCP y FastWebMCP. Permite a agentes de IA leer celdas, escribir matrices, formatear y generar resúmenes con validación estricta Zod y JSON Schema.
+          </p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="glass-panel p-6 rounded-2xl border border-gray-800 hover:border-emerald-500/40 transition group">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-5 group-hover:scale-110 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Hypermedia con HTMX</h3>
+          <p class="text-sm text-gray-400 leading-relaxed">
+            Modales de Buscar y Reemplazar, Asistente de Fórmulas, Exportación e Importación CSV procesados mediante swaps de hipermedia del lado cliente sin necesidad de un servidor backend.
+          </p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="glass-panel p-6 rounded-2xl border border-gray-800 hover:border-emerald-500/40 transition group">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-5 group-hover:scale-110 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">100% Privado & Offline</h3>
+          <p class="text-sm text-gray-400 leading-relaxed">
+            Tus datos financieros y fórmulas nunca abandonan tu máquina. Todo se ejecuta en memoria y persiste en <code class="text-emerald-400">localStorage</code>. Funciona sin conexión a internet.
+          </p>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="glass-panel p-6 rounded-2xl border border-gray-800 hover:border-emerald-500/40 transition group">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-5 group-hover:scale-110 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">30+ Fórmulas Profesionales</h3>
+          <p class="text-sm text-gray-400 leading-relaxed">
+            Catálogo completo: Math (<code class="text-gray-300">SUM, AVERAGE, ROUND</code>), Logic (<code class="text-gray-300">IF, AND, OR</code>), Lookup (<code class="text-gray-300">VLOOKUP, INDEX, MATCH</code>), Text y Fechas con soporte para rangos matriciales.
+          </p>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="glass-panel p-6 rounded-2xl border border-gray-800 hover:border-emerald-500/40 transition group">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-5 group-hover:scale-110 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Listo para Agentes (llms.txt)</h3>
+          <p class="text-sm text-gray-400 leading-relaxed">
+            Cumple con el estándar emergente <code class="text-emerald-400">/llms.txt</code> y <code class="text-emerald-400">/llms-full.txt</code> para que asistentes como Claude, GPT o Gemini comprendan la API y ejecuten tareas automáticamente.
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= WEBMCP PROTOCOL SHOWCASE ================= -->
+  <section id="webmcp" class="py-20 border-t border-gray-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        
+        <div class="lg:col-span-5">
+          <span class="text-xs uppercase tracking-widest text-emerald-400 font-semibold">Interoperabilidad con IA</span>
+          <h2 class="mt-2 text-3xl sm:text-4xl font-bold text-white tracking-tight">
+            El Estándar WebMCP: Cómo los Agentes Usan tu Hoja
+          </h2>
+          <p class="mt-4 text-gray-400 leading-relaxed">
+            WebMCP (Web Model Context Protocol) es la especificación del W3C que permite a agentes de IA interactuar con aplicaciones web de forma estructurada y segura.
+          </p>
+          <ul class="mt-6 space-y-3 text-sm text-gray-300">
+            <li class="flex items-start gap-2.5">
+              <svg class="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <span><strong>Doble superficie:</strong> Declarativa vía HTML <code class="text-emerald-400">&lt;form toolname&gt;</code> e imperativa vía <code class="text-emerald-400">window.WebMCP</code>.</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <svg class="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <span><strong>Schemas Tipados Draft 2020-12:</strong> Validación estricta A1 regex para celdas y matrices 2D tipadas en outputs.</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <svg class="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <span><strong>Auditoría & Logs:</strong> Registro cronológico de duración, parámetros y resultados disponible para depuración.</span>
+            </li>
+          </ul>
+
+          <div class="mt-8 flex items-center gap-4">
+            <a
+              href="./app.html"
+              class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition inline-flex items-center gap-2"
+            >
+              <span>Probar Drawer en Sheets</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </a>
+            <a
+              href="./llms-full.txt"
+              target="_blank"
+              class="text-gray-400 hover:text-emerald-400 text-sm font-medium transition"
+            >
+              Ver JSON Schemas Completos &rarr;
+            </a>
+          </div>
+        </div>
+
+        <!-- 12 Tools Interactive Table (Col 7) -->
+        <div class="lg:col-span-7">
+          <div class="glass-panel rounded-2xl border border-gray-800 p-5 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-gray-800 text-xs font-mono">
+              <span class="text-gray-400">Catálogo de Herramientas WebMCP Registradas</span>
+              <span class="text-emerald-400 font-bold">12 / 12 Herramientas</span>
+            </div>
+
+            <div class="space-y-2 max-h-96 overflow-y-auto pr-1 text-xs font-mono">
+              
+              <div class="p-2.5 rounded-lg bg-gray-900/80 border border-gray-800 flex items-center justify-between">
+                <div>
+                  <span class="text-emerald-400 font-bold">sheets_get_cell</span>
+                  <p class="text-gray-400 text-[11px] font-sans">Lee el valor bruto, calculado y formato de una celda específica (ej. B2).</p>
+                </div>
+                <span class="text-[10px] bg-blue-950 text-blue-300 px-2 py-0.5 rounded border border-blue-800">readOnly</span>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-gray-900/80 border border-gray-800 flex items-center justify-between">
+                <div>
+                  <span class="text-emerald-400 font-bold">sheets_set_cell</span>
+                  <p class="text-gray-400 text-[11px] font-sans">Escribe texto, número o fórmula (=SUM) en una celda con formato opcional.</p>
+                </div>
+                <span class="text-[10px] bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800">readWrite</span>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-gray-900/80 border border-gray-800 flex items-center justify-between">
+                <div>
+                  <span class="text-emerald-400 font-bold">sheets_get_range</span>
+                  <p class="text-gray-400 text-[11px] font-sans">Retorna una matriz rectangular 2D de celdas con sus valores computados.</p>
+                </div>
+                <span class="text-[10px] bg-blue-950 text-blue-300 px-2 py-0.5 rounded border border-blue-800">readOnly</span>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-gray-900/80 border border-gray-800 flex items-center justify-between">
+                <div>
+                  <span class="text-emerald-400 font-bold">sheets_set_range</span>
+                  <p class="text-gray-400 text-[11px] font-sans">Inserta en lote una matriz bidimensional a partir de una celda inicial.</p>
+                </div>
+                <span class="text-[10px] bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800">readWrite</span>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-gray-900/80 border border-gray-800 flex items-center justify-between">
+                <div>
+                  <span class="text-emerald-400 font-bold">sheets_evaluate_formula</span>
+                  <p class="text-gray-400 text-[11px] font-sans">Evalúa cualquier expresión de fórmula sobre la marcha sin alterar el estado.</p>
+                </div>
+                <span class="text-[10px] bg-blue-950 text-blue-300 px-2 py-0.5 rounded border border-blue-800">readOnly</span>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-gray-900/80 border border-gray-800 flex items-center justify-between">
+                <div>
+                  <span class="text-emerald-400 font-bold">sheets_clear_range</span>
+                  <p class="text-gray-400 text-[11px] font-sans">Limpia valores y estilos en un rango rectangular (ej. A1:C10).</p>
+                </div>
+                <span class="text-[10px] bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800">readWrite</span>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-gray-900/80 border border-gray-800 flex items-center justify-between">
+                <div>
+                  <span class="text-emerald-400 font-bold">sheets_create_sheet</span>
+                  <p class="text-gray-400 text-[11px] font-sans">Añade una nueva pestaña de hoja de cálculo al libro activo.</p>
+                </div>
+                <span class="text-[10px] bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800">readWrite</span>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-gray-900/80 border border-gray-800 flex items-center justify-between">
+                <div>
+                  <span class="text-emerald-400 font-bold">sheets_delete_sheet</span>
+                  <p class="text-gray-400 text-[11px] font-sans">Elimina una pestaña existente preservando al menos una activa.</p>
+                </div>
+                <span class="text-[10px] bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800">readWrite</span>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-gray-900/80 border border-gray-800 flex items-center justify-between">
+                <div>
+                  <span class="text-emerald-400 font-bold">sheets_list_sheets</span>
+                  <p class="text-gray-400 text-[11px] font-sans">Lista todas las hojas del libro, IDs y conteo de celdas pobladas.</p>
+                </div>
+                <span class="text-[10px] bg-blue-950 text-blue-300 px-2 py-0.5 rounded border border-blue-800">readOnly</span>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-gray-900/80 border border-gray-800 flex items-center justify-between">
+                <div>
+                  <span class="text-emerald-400 font-bold">sheets_find_replace</span>
+                  <p class="text-gray-400 text-[11px] font-sans">Búsqueda y reemplazo global de texto o fórmulas con matchCase opcional.</p>
+                </div>
+                <span class="text-[10px] bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800">readWrite</span>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-gray-900/80 border border-gray-800 flex items-center justify-between">
+                <div>
+                  <span class="text-emerald-400 font-bold">sheets_export_data</span>
+                  <p class="text-gray-400 text-[11px] font-sans">Serializa la hoja o libro completo a formato CSV (RFC 4180) o JSON.</p>
+                </div>
+                <span class="text-[10px] bg-blue-950 text-blue-300 px-2 py-0.5 rounded border border-blue-800">readOnly</span>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-gray-900/80 border border-gray-800 flex items-center justify-between">
+                <div>
+                  <span class="text-emerald-400 font-bold">sheets_get_summary</span>
+                  <p class="text-gray-400 text-[11px] font-sans">Métricas analíticas agregadas: celdas activas, conteo numérico, suma y promedio.</p>
+                </div>
+                <span class="text-[10px] bg-blue-950 text-blue-300 px-2 py-0.5 rounded border border-blue-800">readOnly</span>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= FORMULA CATALOG ================= -->
+  <section id="formulas" class="py-20 bg-gray-900/50 border-t border-gray-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-12">
+        <h2 class="text-xs uppercase tracking-widest text-emerald-400 font-semibold">Capacidades de Cálculo</h2>
+        <p class="mt-2 text-3xl sm:text-4xl font-bold text-white tracking-tight">
+          Más de 30 Funciones Nativas
+        </p>
+        <p class="mt-4 text-base text-gray-400">
+          Un motor de análisis léxico y sintáctico con precedencia de operadores estándar y propagación precisa de errores.
+        </p>
+
+        <!-- Category Filters -->
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-2">
+          <button class="cat-filter-btn active-cat bg-emerald-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition" data-category="all">Todas</button>
+          <button class="cat-filter-btn bg-gray-800 text-gray-300 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition" data-category="math">Matemáticas</button>
+          <button class="cat-filter-btn bg-gray-800 text-gray-300 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition" data-category="logic">Lógica</button>
+          <button class="cat-filter-btn bg-gray-800 text-gray-300 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition" data-category="lookup">Búsqueda & Matrices</button>
+          <button class="cat-filter-btn bg-gray-800 text-gray-300 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition" data-category="text">Texto</button>
+          <button class="cat-filter-btn bg-gray-800 text-gray-300 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition" data-category="datetime">Fecha & Hora</button>
+        </div>
+      </div>
+
+      <!-- Formula Cards Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 font-mono text-xs">
+        
+        <!-- Math -->
+        <div class="formula-card glass-panel p-4 rounded-xl border border-gray-800" data-category="math">
+          <div class="flex items-center justify-between text-emerald-400 font-bold mb-1">
+            <span>SUM(rango, ...)</span>
+            <span class="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-sans">Math</span>
+          </div>
+          <p class="text-gray-400 font-sans text-xs">Suma todos los números del rango o argumentos.</p>
+          <span class="text-gray-500 text-[11px] mt-2 block">=SUM(A1:A10) &rarr; 450</span>
+        </div>
+
+        <div class="formula-card glass-panel p-4 rounded-xl border border-gray-800" data-category="math">
+          <div class="flex items-center justify-between text-emerald-400 font-bold mb-1">
+            <span>AVERAGE(rango, ...)</span>
+            <span class="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-sans">Math</span>
+          </div>
+          <p class="text-gray-400 font-sans text-xs">Calcula el promedio aritmético de los valores numéricos.</p>
+          <span class="text-gray-500 text-[11px] mt-2 block">=AVERAGE(B1:B5) &rarr; 85.4</span>
+        </div>
+
+        <div class="formula-card glass-panel p-4 rounded-xl border border-gray-800" data-category="math">
+          <div class="flex items-center justify-between text-emerald-400 font-bold mb-1">
+            <span>ROUND(num, decimales)</span>
+            <span class="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-sans">Math</span>
+          </div>
+          <p class="text-gray-400 font-sans text-xs">Redondea un número a la cantidad de decimales indicada.</p>
+          <span class="text-gray-500 text-[11px] mt-2 block">=ROUND(3.14159, 2) &rarr; 3.14</span>
+        </div>
+
+        <!-- Logic -->
+        <div class="formula-card glass-panel p-4 rounded-xl border border-gray-800" data-category="logic">
+          <div class="flex items-center justify-between text-emerald-400 font-bold mb-1">
+            <span>IF(cond, val_si, val_no)</span>
+            <span class="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-sans">Logic</span>
+          </div>
+          <p class="text-gray-400 font-sans text-xs">Evalúa una condición lógica y bifurca el valor devuelto.</p>
+          <span class="text-gray-500 text-[11px] mt-2 block">=IF(A1>100, "Alto", "Normal")</span>
+        </div>
+
+        <div class="formula-card glass-panel p-4 rounded-xl border border-gray-800" data-category="logic">
+          <div class="flex items-center justify-between text-emerald-400 font-bold mb-1">
+            <span>AND(val1, val2, ...)</span>
+            <span class="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-sans">Logic</span>
+          </div>
+          <p class="text-gray-400 font-sans text-xs">Retorna TRUE si todas las condiciones lógicas son verdaderas.</p>
+          <span class="text-gray-500 text-[11px] mt-2 block">=AND(A1>0, B1&lt;10) &rarr; TRUE</span>
+        </div>
+
+        <!-- Lookup -->
+        <div class="formula-card glass-panel p-4 rounded-xl border border-gray-800" data-category="lookup">
+          <div class="flex items-center justify-between text-emerald-400 font-bold mb-1">
+            <span>VLOOKUP(clave, matriz, col, [ord])</span>
+            <span class="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-sans">Lookup</span>
+          </div>
+          <p class="text-gray-400 font-sans text-xs">Busca verticalmente un valor en la primera columna y devuelve otra.</p>
+          <span class="text-gray-500 text-[11px] mt-2 block">=VLOOKUP("ID45", A1:D20, 3, FALSE)</span>
+        </div>
+
+        <div class="formula-card glass-panel p-4 rounded-xl border border-gray-800" data-category="lookup">
+          <div class="flex items-center justify-between text-emerald-400 font-bold mb-1">
+            <span>INDEX(rango, fila, [col])</span>
+            <span class="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-sans">Lookup</span>
+          </div>
+          <p class="text-gray-400 font-sans text-xs">Devuelve el valor en la intersección de fila y columna.</p>
+          <span class="text-gray-500 text-[11px] mt-2 block">=INDEX(A1:C10, 2, 3)</span>
+        </div>
+
+        <div class="formula-card glass-panel p-4 rounded-xl border border-gray-800" data-category="lookup">
+          <div class="flex items-center justify-between text-emerald-400 font-bold mb-1">
+            <span>MATCH(clave, rango, [tipo])</span>
+            <span class="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-sans">Lookup</span>
+          </div>
+          <p class="text-gray-400 font-sans text-xs">Encuentra la posición relativa de un elemento en un vector.</p>
+          <span class="text-gray-500 text-[11px] mt-2 block">=MATCH("Q3", A1:A12, 0) &rarr; 7</span>
+        </div>
+
+        <!-- Text -->
+        <div class="formula-card glass-panel p-4 rounded-xl border border-gray-800" data-category="text">
+          <div class="flex items-center justify-between text-emerald-400 font-bold mb-1">
+            <span>CONCATENATE(t1, t2, ...)</span>
+            <span class="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-sans">Text</span>
+          </div>
+          <p class="text-gray-400 font-sans text-xs">Une múltiples cadenas de texto o celdas en una sola.</p>
+          <span class="text-gray-500 text-[11px] mt-2 block">=CONCATENATE(A1, " - ", B1)</span>
+        </div>
+
+        <!-- Datetime -->
+        <div class="formula-card glass-panel p-4 rounded-xl border border-gray-800" data-category="datetime">
+          <div class="flex items-center justify-between text-emerald-400 font-bold mb-1">
+            <span>TODAY() / NOW()</span>
+            <span class="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-sans">Date</span>
+          </div>
+          <p class="text-gray-400 font-sans text-xs">Retorna la fecha o fecha con hora actual formateada ISO.</p>
+          <span class="text-gray-500 text-[11px] mt-2 block">=TODAY() &rarr; 2026-09-07</span>
+        </div>
+
+        <div class="formula-card glass-panel p-4 rounded-xl border border-gray-800" data-category="math">
+          <div class="flex items-center justify-between text-emerald-400 font-bold mb-1">
+            <span>COUNTIF(rango, criterio)</span>
+            <span class="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-sans">Math</span>
+          </div>
+          <p class="text-gray-400 font-sans text-xs">Cuenta las celdas que cumplen un criterio específico.</p>
+          <span class="text-gray-500 text-[11px] mt-2 block">=COUNTIF(C1:C50, "&gt;100")</span>
+        </div>
+
+        <div class="formula-card glass-panel p-4 rounded-xl border border-gray-800" data-category="math">
+          <div class="flex items-center justify-between text-emerald-400 font-bold mb-1">
+            <span>SUMIF(rango, crit, [r_suma])</span>
+            <span class="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-sans">Math</span>
+          </div>
+          <p class="text-gray-400 font-sans text-xs">Suma condicional basada en el criterio de prueba.</p>
+          <span class="text-gray-500 text-[11px] mt-2 block">=SUMIF(A1:A20, "Ventas", B1:B20)</span>
+        </div>
+
+      </div>
+
+      <div class="text-center mt-10">
+        <a href="./app.html" class="inline-flex items-center gap-2 text-emerald-400 hover:text-emerald-300 font-semibold text-sm">
+          <span>Abrir Asistente de Funciones en la aplicación</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= ARCHITECTURE & KDD ================= -->
+  <section id="architecture" class="py-20 border-t border-gray-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-xs uppercase tracking-widest text-emerald-400 font-semibold">Integridad y Verificabilidad</h2>
+        <p class="mt-2 text-3xl sm:text-4xl font-bold text-white tracking-tight">
+          Gobernado por KDD & CCDD
+        </p>
+        <p class="mt-4 text-base text-gray-400">
+          Desarrollado bajo la metodología <a href="https://github.com/MauricioPerera/KDD" class="text-emerald-400 underline hover:text-emerald-300">MauricioPerera/KDD</a> (Knowledge-Driven Development) y Contract-Driven Development.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
+        
+        <div class="glass-panel p-6 rounded-2xl border border-gray-800">
+          <div class="text-emerald-400 font-mono text-xs font-bold uppercase tracking-wider mb-2">Pilar 1</div>
+          <h3 class="text-lg font-bold text-white mb-2">Contratos Criptográficos</h3>
+          <p class="text-gray-400 leading-relaxed text-xs">
+            Cada módulo (Store, Engine, DAG, Hypermedia Router, WebMCP Bridge) está blindado por contratos con oráculos de pruebas congelados y verificación SHA-256 en CI/CD.
+          </p>
+        </div>
+
+        <div class="glass-panel p-6 rounded-2xl border border-gray-800">
+          <div class="text-emerald-400 font-mono text-xs font-bold uppercase tracking-wider mb-2">Pilar 2</div>
+          <h3 class="text-lg font-bold text-white mb-2">Open Knowledge Format</h3>
+          <p class="text-gray-400 leading-relaxed text-xs">
+            Toda la arquitectura, modelos de datos y protocolos se documentan en <code class="text-emerald-400">knowledge/</code> bajo el estándar OKF v1.0.0, permitiendo comprensión instantánea para humanos y LLMs.
+          </p>
+        </div>
+
+        <div class="glass-panel p-6 rounded-2xl border border-gray-800">
+          <div class="text-emerald-400 font-mono text-xs font-bold uppercase tracking-wider mb-2">Pilar 3</div>
+          <h3 class="text-lg font-bold text-white mb-2">Validación Automatizada</h3>
+          <p class="text-gray-400 leading-relaxed text-xs">
+            Las suites de validación deterministas ejecutan análisis estático ASCII, linter OKF, chequeo de contratos CCDD y pruebas unitarias completas antes de cada despliegue a GitHub Pages.
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= FINAL CALL TO ACTION ================= -->
+  <section class="py-20 relative overflow-hidden bg-gradient-to-b from-gray-950 to-emerald-950/30 border-t border-gray-800">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+      <h2 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
+        Comienza a Calcular o Conecta tu Agente de IA Ahora
+      </h2>
+      <p class="mt-4 text-base sm:text-lg text-gray-400">
+        Sin instalaciones, sin servidores, sin crear cuentas. 100% privado en tu navegador.
+      </p>
+
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+        <a
+          href="./app.html"
+          class="inline-flex items-center gap-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-base font-semibold px-8 py-4 rounded-xl shadow-xl shadow-emerald-600/30 hover:shadow-emerald-500/40 transition transform hover:-translate-y-0.5 active:translate-y-0"
+        >
+          <span>Abrir Hoja de Cálculo</span>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </a>
+
+        <a
+          href="./llms.txt"
+          target="_blank"
+          class="inline-flex items-center gap-2 glass-panel hover:bg-gray-800 text-gray-200 text-base font-semibold px-6 py-4 rounded-xl border border-gray-700 transition"
+        >
+          <span>Documentación para LLMs (llms.txt)</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="glass-panel border-t border-gray-800/80 py-12 text-sm text-gray-400">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 rounded bg-emerald-600 flex items-center justify-center text-white">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 7h4v2H7zm0 4h4v2H7zm0 4h4v2H7zm6-8h4v2h-4zm0 4h4v2h-4zm0 4h4v2h-4z"/>
+          </svg>
+        </div>
+        <span class="font-semibold text-white">WebMCP Sheets</span>
+        <span class="text-gray-500">· Creado por <a href="https://github.com/MauricioPerera" target="_blank" class="text-emerald-400 hover:underline">Mauricio Perera</a></span>
+      </div>
+
+      <div class="flex items-center gap-6 text-xs">
+        <a href="./app.html" class="hover:text-emerald-400 transition">Aplicación</a>
+        <a href="./llms.txt" class="hover:text-emerald-400 transition">llms.txt</a>
+        <a href="./llms-full.txt" class="hover:text-emerald-400 transition">llms-full.txt</a>
+        <a href="https://github.com/MauricioPerera/webmcp-sheets" target="_blank" class="hover:text-emerald-400 transition">GitHub</a>
+        <a href="https://webmcp.com" target="_blank" class="hover:text-emerald-400 transition">WebMCP.com</a>
+        <span class="text-gray-600">Licencia MIT</span>
+      </div>
+    </div>
+  </footer>
 
   <!-- 8. Declarative WebMCP Forms (Autonomous Agent Discovery Surface) -->
   <div id="declarative-webmcp-surface" class="sr-only">
@@ -129,7 +885,7 @@
     </form>
   </div>
 
-  <!-- Main Application Bootstrap -->
-  <script type="module" src="./src/main.ts"></script>
+  <!-- Landing Page Script & WebMCP Service Bootstrap -->
+  <script type="module" src="./src/landing.ts"></script>
 </body>
 </html>

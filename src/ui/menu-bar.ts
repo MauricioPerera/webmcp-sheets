@@ -36,11 +36,11 @@ export class MenuBar {
       <div class="flex items-center justify-between px-3 py-1.5 bg-white border-b border-gray-200 text-xs">
         <div class="flex items-center gap-3">
           <!-- Sheets Logo -->
-          <div class="flex items-center gap-1.5 cursor-pointer" title="WebMCP Sheets">
+          <a href="./index.html" class="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition" title="Ir a la Página Principal">
             <svg class="w-8 h-8 text-emerald-600" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 7h4v2H7zm0 4h4v2H7zm0 4h4v2H7zm6-8h4v2h-4zm0 4h4v2h-4zm0 4h4v2h-4z"/>
             </svg>
-          </div>
+          </a>
 
           <div class="flex flex-col">
             <!-- Document Title -->
@@ -117,7 +117,11 @@ export class MenuBar {
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
+          <a href="./index.html" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 transition shadow-sm" title="Volver a la Página Principal">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            Inicio
+          </a>
           <span class="text-[11px] text-gray-500 flex items-center gap-1">
             <svg class="w-3 h-3 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
             Saved locally
