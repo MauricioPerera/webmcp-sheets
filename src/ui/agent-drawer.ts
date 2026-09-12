@@ -304,20 +304,20 @@ export class AgentDrawer {
         return `
         <div class="p-2.5 rounded border ${isOk ? 'border-gray-200 bg-white' : 'border-red-200 bg-red-50/50'} shadow-xs">
           <div class="flex items-center justify-between mb-1">
-            <span class="font-bold ${isOk ? 'text-emerald-700' : 'text-red-700'}">${log.toolName}</span>
+            <span class="font-bold ${isOk ? 'text-emerald-700' : 'text-red-700'}">${escapeHtml(log.toolName)}</span>
             <span class="text-[10px] text-gray-400">${log.durationMs}ms</span>
           </div>
           <div class="text-[10px] text-gray-600 bg-gray-50 p-1.5 rounded overflow-x-auto">
-            <code>${JSON.stringify(log.args)}</code>
+            <code>${escapeHtml(JSON.stringify(log.args))}</code>
           </div>
           ${
             log.result !== undefined
-              ? `<div class="mt-1 text-[10px] text-emerald-800 bg-emerald-50/50 p-1.5 rounded overflow-x-auto font-mono">➡ ${JSON.stringify(log.result)}</div>`
+              ? `<div class="mt-1 text-[10px] text-emerald-800 bg-emerald-50/50 p-1.5 rounded overflow-x-auto font-mono">➡ ${escapeHtml(JSON.stringify(log.result))}</div>`
               : ''
           }
           ${
             log.error
-              ? `<div class="mt-1 text-[10px] text-red-600 font-sans">⚠ ${log.error}</div>`
+              ? `<div class="mt-1 text-[10px] text-red-600 font-sans">⚠ ${escapeHtml(log.error)}</div>`
               : ''
           }
         </div>
@@ -325,4 +325,10 @@ export class AgentDrawer {
       })
       .join('');
   }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char]!);
 }

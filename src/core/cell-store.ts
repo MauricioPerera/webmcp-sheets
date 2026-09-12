@@ -221,6 +221,20 @@ export class CellStore {
     return true;
   }
 
+  public duplicateSheet(sheetId: string, name: string): SheetData | undefined {
+    const source = this.getSheetById(sheetId);
+    const trimmed = name.trim();
+    if (!source || !trimmed || this.getSheetByName(trimmed)) return undefined;
+    this.recordHistory('Duplicate sheet');
+    const duplicate: SheetData = JSON.parse(JSON.stringify(source));
+    duplicate.id = `sheet_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    duplicate.name = trimmed;
+    this.workbook.sheets.push(duplicate);
+    this.workbook.activeSheetId = duplicate.id;
+    this.notify('sheet_added');
+    return duplicate;
+  }
+
   public getCell(refOrCoord: string | CellCoord, sheetId?: string): CellData | undefined {
     const sheet = sheetId ? this.getSheetById(sheetId) : this.getActiveSheet();
     if (!sheet) return undefined;
@@ -382,7 +396,7 @@ export class CellStore {
       const data = localStorage.getItem(this.storageKey);
       if (data) {
         const parsed = JSON.parse(data);
-        if (parsed && Array.isArray(parsed.sheets) && parsed.sheets.length > 0) {
+        if (isValidWorkbook(parsed)) {
           this.workbook = parsed;
           this.undoStack = [];
           this.redoStack = [];
@@ -403,7 +417,7 @@ export class CellStore {
   public importJSON(jsonStr: string): boolean {
     try {
       const parsed = JSON.parse(jsonStr);
-      if (parsed && Array.isArray(parsed.sheets) && parsed.sheets.length > 0) {
+      if (isValidWorkbook(parsed)) {
         this.recordHistory('Import JSON');
         this.workbook = parsed;
         this.notify('loaded');
@@ -424,4 +438,22 @@ export class CellStore {
     this.saveToLocalStorage();
     this.listeners.forEach((fn) => fn(event));
   }
+}
+
+function isValidWorkbook(value: unknown): value is WorkbookData {
+  if (!value || typeof value !== 'object') return false;
+  const workbook = value as Partial<WorkbookData>;
+  if (typeof workbook.id !== 'string' || typeof workbook.title !== 'string' ||
+      typeof workbook.activeSheetId !== 'string' || !Array.isArray(workbook.sheets) ||
+      workbook.sheets.length === 0) return false;
+  if (!workbook.sheets.every((sheet) => {
+    if (!sheet || typeof sheet !== 'object') return false;
+    const s = sheet as Partial<SheetData>;
+    if (typeof s.id !== 'string' || typeof s.name !== 'string' ||
+        !s.cells || typeof s.cells !== 'object' || typeof s.rowCount !== 'number' ||
+        typeof s.colCount !== 'number') return false;
+    return Object.entries(s.cells).every(([ref, cell]) =>
+      /^[A-Z]+[1-9][0-9]*$/.test(ref) && !!cell && typeof cell.raw === 'string');
+  })) return false;
+  return workbook.sheets.some((sheet) => sheet.id === workbook.activeSheetId);
 }

@@ -55,7 +55,7 @@ A 100% functional, responsive **Google Sheets** clone deployable directly to **G
   - `/panel/webmcp-info`: WebMCP capabilities and architecture panel.
 
 ### 6. FastWebMCP & webmcp.com Integration
-- Exposes 12 declarative and imperative tools according to the W3C Web Machine Learning WebMCP draft and FastWebMCP:
+- Exposes 21 declarative and imperative tools according to the W3C Web Machine Learning WebMCP draft and FastWebMCP. Every call uses a shared Zod-validated dispatcher with audit logs and bounded inputs.
   1. `sheets_get_cell({ sheet, cell })`
   2. `sheets_set_cell({ sheet, cell, value, format })`
   3. `sheets_get_range({ sheet, range })`
@@ -68,6 +68,16 @@ A 100% functional, responsive **Google Sheets** clone deployable directly to **G
   10. `sheets_find_replace({ find, replace, sheet, matchCase })`
   11. `sheets_export_data({ format, sheet })`
   12. `sheets_get_summary({ sheet })`
+  13. `sheets_confirm_operation({ operationId })` — requires a visible browser confirmation.
+  14. `sheets_get_used_range({ sheet })`
+  15. `sheets_get_formula_errors({ sheet })`
+  16. `sheets_format_range({ range, format, sheet })`
+  17. `sheets_rename_sheet({ name, newName })`
+  18. `sheets_duplicate_sheet({ name, newName })`
+  19. `sheets_set_active_sheet({ name })`
+  20. `sheets_undo()`
+  21. `sheets_redo()`
+- `sheets_clear_range`, `sheets_delete_sheet`, and `sheets_find_replace` are previews: they issue a short-lived operation ID; only `sheets_confirm_operation` can apply the change after the user approves the browser dialog.
 - Browser-native `navigator.modelContext` support with automatic fallback polyfill.
 - Built-in **WebMCP AI Agent Console**: An interactive drawer to test directives (e.g. "Generate monthly budget", "Format headers", "Calculate column totals") and view real-time tool execution logs.
 - Declarative `<form toolname="...">` autonomous discovery surface for browser crawlers and LLM agents.

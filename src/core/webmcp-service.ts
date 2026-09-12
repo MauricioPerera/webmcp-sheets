@@ -10,6 +10,21 @@ import { DependencyGraph } from './dependency-graph';
 import { ImporterExporter } from './importer-exporter';
 import { WebMcpToolMetadata, WebMcpExecutionLog } from './types';
 
+const MAX_RANGE_CELLS = 10_000;
+const MAX_MATRIX_ROWS = 100;
+const MAX_MATRIX_COLUMNS = 100;
+const MAX_TEXT_LENGTH = 10_000;
+const MAX_EXPORT_BYTES = 1_000_000;
+const PENDING_OPERATION_TTL_MS = 60_000;
+
+type PendingOperation = {
+  kind: 'clear_range' | 'find_replace' | 'delete_sheet';
+  args: Record<string, unknown>;
+  summary: string;
+  expiresAt: number;
+  approvedByUser: boolean;
+};
+
 export interface InternalToolRecord {
   name: string;
   title?: string;
@@ -30,6 +45,7 @@ export class WebMcpService {
   private toolRegistry: Map<string, InternalToolRecord> = new Map();
   private executionLogs: WebMcpExecutionLog[] = [];
   private listeners: Set<(log: WebMcpExecutionLog) => void> = new Set();
+  private pendingOperations = new Map<string, PendingOperation>();
 
   constructor(
     store: CellStore,
@@ -78,6 +94,7 @@ export class WebMcpService {
     const startTime = Date.now();
     try {
       const parsedArgs = record.schema.parse(args);
+      this.enforceLimits(toolName, parsedArgs);
       const result = await record.execute(parsedArgs);
       const durationMs = Date.now() - startTime;
       this.logExecution(toolName, args, 'success', result, undefined, durationMs);
@@ -87,6 +104,81 @@ export class WebMcpService {
       this.logExecution(toolName, args, 'error', undefined, error.message || String(error), durationMs);
       throw error;
     }
+  }
+
+  private enforceLimits(toolName: string, args: Record<string, unknown>): void {
+    const checkText = (value: unknown): void => {
+      if (typeof value === 'string' && value.length > MAX_TEXT_LENGTH) {
+        throw new Error(`Text input exceeds the ${MAX_TEXT_LENGTH} character limit`);
+      }
+      if (Array.isArray(value)) value.forEach(checkText);
+      else if (value && typeof value === 'object') Object.values(value).forEach(checkText);
+    };
+    checkText(args);
+    const range = typeof args.range === 'string' ? parseRange(args.range) : undefined;
+    if (range) {
+      const cells = (range.endRow - range.startRow + 1) * (range.endCol - range.startCol + 1);
+      if (cells > MAX_RANGE_CELLS) throw new Error(`Range exceeds the ${MAX_RANGE_CELLS} cell limit`);
+    }
+    if (toolName === 'sheets_set_range') {
+      const values = args.values as unknown[][];
+      const columns = Math.max(0, ...values.map((row) => row.length));
+      if (values.length > MAX_MATRIX_ROWS || columns > MAX_MATRIX_COLUMNS || values.length * columns > MAX_RANGE_CELLS) {
+        throw new Error('Matrix exceeds the configured WebMCP limits');
+      }
+    }
+  }
+
+  private createPendingOperation(kind: PendingOperation['kind'], args: Record<string, unknown>, summary: string): { operationId: string; summary: string; expiresAt: number } {
+    this.prunePendingOperations();
+    const operationId = `op_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    const expiresAt = Date.now() + PENDING_OPERATION_TTL_MS;
+    this.pendingOperations.set(operationId, { kind, args, summary, expiresAt, approvedByUser: false });
+    this.showConfirmationRequest(operationId, summary);
+    return { operationId, summary, expiresAt };
+  }
+
+  private prunePendingOperations(): void {
+    for (const [id, operation] of this.pendingOperations) {
+      if (operation.expiresAt <= Date.now()) this.pendingOperations.delete(id);
+    }
+  }
+
+  public approvePendingOperation(operationId: string): boolean {
+    this.prunePendingOperations();
+    const operation = this.pendingOperations.get(operationId);
+    if (!operation) return false;
+    operation.approvedByUser = true;
+    return true;
+  }
+
+  private showConfirmationRequest(operationId: string, summary: string): void {
+    if (typeof document === 'undefined') return;
+    document.getElementById(`webmcp-confirmation-${operationId}`)?.remove();
+    const banner = document.createElement('section');
+    banner.id = `webmcp-confirmation-${operationId}`;
+    banner.setAttribute('role', 'alertdialog');
+    banner.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:1000;max-width:420px;padding:16px;background:#fff7ed;border:1px solid #fb923c;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);font:14px system-ui';
+    const message = document.createElement('p');
+    message.textContent = `Agent requests: ${summary}`;
+    const status = document.createElement('p');
+    status.textContent = 'Review the impact, then approve to allow the agent to execute it.';
+    const approve = document.createElement('button');
+    approve.type = 'button';
+    approve.textContent = 'Approve operation';
+    approve.style.cssText = 'margin-right:8px;padding:6px 10px;background:#15803d;color:white;border:0;border-radius:4px;cursor:pointer';
+    approve.addEventListener('click', () => {
+      this.approvePendingOperation(operationId);
+      approve.disabled = true;
+      status.textContent = 'Approved by user. The agent may now confirm this operation.';
+    });
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.textContent = 'Cancel';
+    cancel.style.cssText = 'padding:6px 10px;background:white;border:1px solid #9ca3af;border-radius:4px;cursor:pointer';
+    cancel.addEventListener('click', () => { this.pendingOperations.delete(operationId); banner.remove(); });
+    banner.append(message, status, approve, cancel);
+    document.body.append(banner);
   }
 
   private logExecution(
@@ -257,7 +349,7 @@ export class WebMcpService {
         if (!targetSheet) throw new Error(`Sheet "${sheetName}" not found`);
 
         const ref = coordsToRef(parsed.col, parsed.row);
-        this.store.setCell(ref, { raw: value, format: format as any }, targetSheet.id);
+        this.store.setCell(ref, { raw: value, computed: undefined, error: null, format: format as any }, targetSheet.id);
         const { hasCycle } = this.dag.updateCellDependencies(ref, value, targetSheet.id);
         if (!hasCycle) {
           this.dag.recalculate(ref, targetSheet.id);
@@ -398,6 +490,7 @@ export class WebMcpService {
         const targetSheet = sheetName ? this.store.getSheetByName(sheetName) : this.store.getActiveSheet();
         if (!targetSheet) throw new Error(`Sheet "${sheetName}" not found`);
 
+        this.store.recordHistory('Batch update range');
         for (let r = 0; r < values.length; r++) {
           const row = values[r];
           for (let c = 0; c < row.length; c++) {
@@ -459,8 +552,8 @@ export class WebMcpService {
     // 6. sheets_clear_range
     this.addTool({
       name: 'sheets_clear_range',
-      title: 'Clear Cell Range',
-      description: 'Clear values and formatting in a specified rectangular range.',
+      title: 'Preview Clear Cell Range',
+      description: 'Prepare a clear operation and return a short-lived confirmation ID; it does not change the sheet.',
       schema: z.object({
         range: z.string().regex(/^([A-Za-z0-9_]+!)?[A-Za-z]+[1-9][0-9]*:[A-Za-z]+[1-9][0-9]*$/, 'Invalid range format. Must be A1:B10 format'),
         sheet: z.string().optional(),
@@ -486,18 +579,19 @@ export class WebMcpService {
         $schema: 'https://json-schema.org/draft/2020-12/schema',
         type: 'object',
         properties: {
-          success: { type: 'boolean' },
-          clearedRange: { type: 'string' },
+          operationId: { type: 'string' },
+          summary: { type: 'string' },
+          expiresAt: { type: 'number' },
         },
-        required: ['success', 'clearedRange'],
+        required: ['operationId', 'summary', 'expiresAt'],
       },
       readOnly: false,
       execute: async ({ range, sheet }) => {
-        const parsed = parseRange(range);
         const targetSheet = sheet ? this.store.getSheetByName(sheet) : this.store.getActiveSheet();
-        this.store.clearRange(parsed, targetSheet?.id);
-        this.dag.recalculateAll();
-        return { success: true, clearedRange: range };
+        if (!targetSheet) throw new Error('Sheet not found');
+        const parsed = parseRange(range);
+        const affected = (parsed.endRow - parsed.startRow + 1) * (parsed.endCol - parsed.startCol + 1);
+        return this.createPendingOperation('clear_range', { range, sheet: targetSheet.name }, `Clear up to ${affected} cells in ${targetSheet.name}:${range}`);
       },
     });
 
@@ -541,8 +635,8 @@ export class WebMcpService {
     // 8. sheets_delete_sheet
     this.addTool({
       name: 'sheets_delete_sheet',
-      title: 'Delete Worksheet',
-      description: 'Delete a sheet tab from the workbook by name.',
+      title: 'Preview Delete Worksheet',
+      description: 'Prepare deletion of a worksheet and return a short-lived confirmation ID; it does not delete yet.',
       schema: z.object({
         name: z.string().describe('Name of the sheet to delete'),
       }),
@@ -562,18 +656,18 @@ export class WebMcpService {
         $schema: 'https://json-schema.org/draft/2020-12/schema',
         type: 'object',
         properties: {
-          success: { type: 'boolean' },
-          deleted: { type: 'string' },
+          operationId: { type: 'string' },
+          summary: { type: 'string' },
+          expiresAt: { type: 'number' },
         },
-        required: ['success', 'deleted'],
+        required: ['operationId', 'summary', 'expiresAt'],
       },
       readOnly: false,
       execute: async ({ name }) => {
         const sheet = this.store.getSheetByName(name);
         if (!sheet) throw new Error(`Sheet "${name}" not found`);
-        const ok = this.store.deleteSheet(sheet.id);
-        if (!ok) throw new Error('Cannot delete the only sheet in the workbook');
-        return { success: true, deleted: name };
+        if (this.store.getSheets().length <= 1) throw new Error('Cannot delete the only sheet in the workbook');
+        return this.createPendingOperation('delete_sheet', { name: sheet.name }, `Delete worksheet ${sheet.name} with ${Object.keys(sheet.cells).length} populated cells`);
       },
     });
 
@@ -629,8 +723,8 @@ export class WebMcpService {
     // 10. sheets_find_replace
     this.addTool({
       name: 'sheets_find_replace',
-      title: 'Find and Replace in Cells',
-      description: 'Find and replace text or formula substrings across cells.',
+      title: 'Preview Find and Replace',
+      description: 'Preview a find/replace operation and return a short-lived confirmation ID; it does not alter cells yet.',
       schema: z.object({
         find: z.string().min(1).describe('String to search for'),
         replace: z.string().describe('Replacement string'),
@@ -665,10 +759,11 @@ export class WebMcpService {
         $schema: 'https://json-schema.org/draft/2020-12/schema',
         type: 'object',
         properties: {
-          success: { type: 'boolean' },
-          replacementsCount: { type: 'number' },
+          operationId: { type: 'string' },
+          summary: { type: 'string' },
+          expiresAt: { type: 'number' },
         },
-        required: ['success', 'replacementsCount'],
+        required: ['operationId', 'summary', 'expiresAt'],
       },
       readOnly: false,
       execute: async ({ find, replace, sheet, matchCase }) => {
@@ -683,16 +778,10 @@ export class WebMcpService {
 
           if (haystack.includes(needle)) {
             const regex = new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), matchCase ? 'g' : 'gi');
-            const updated = raw.replace(regex, replace);
-            this.store.setCellRaw(ref, updated, targetSheet.id, false);
-            this.dag.updateCellDependencies(ref, updated, targetSheet.id);
             replacements++;
           }
         }
-        if (replacements > 0) {
-          this.dag.recalculateAll();
-        }
-        return { success: true, replacementsCount: replacements };
+        return this.createPendingOperation('find_replace', { find, replace, sheet: targetSheet.name, matchCase: !!matchCase }, `Replace ${replacements} matching cells in ${targetSheet.name}`);
       },
     });
 
@@ -733,12 +822,15 @@ export class WebMcpService {
       },
       readOnly: true,
       execute: async ({ format, sheet }) => {
+        let data: string;
         if (format === 'json') {
-          return { format: 'json', data: this.store.exportJSON() };
+          data = this.store.exportJSON();
         } else {
           const targetSheet = sheet ? this.store.getSheetByName(sheet) : this.store.getActiveSheet();
-          return { format: 'csv', data: this.io.exportCSV(targetSheet?.id) };
+          data = this.io.exportCSV(targetSheet?.id);
         }
+        if (data.length > MAX_EXPORT_BYTES) throw new Error(`Export exceeds the ${MAX_EXPORT_BYTES} byte limit`);
+        return { format, data };
       },
     });
 
@@ -801,6 +893,112 @@ export class WebMcpService {
       },
     });
 
+    const objectSchema = { $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object', additionalProperties: false } as Record<string, unknown>;
+
+    this.addTool({
+      name: 'sheets_confirm_operation', title: 'Confirm Pending Spreadsheet Operation',
+      description: 'Execute a previously previewed destructive operation only after a visible browser confirmation. Use the operationId returned by a preview tool.',
+      schema: z.object({ operationId: z.string().min(1) }), inputSchema: { ...objectSchema, properties: { operationId: { type: 'string' } }, required: ['operationId'] },
+      outputSchema: objectSchema, readOnly: false,
+      execute: async ({ operationId }) => {
+        this.prunePendingOperations();
+        const operation = this.pendingOperations.get(operationId);
+        if (!operation) throw new Error('Operation is missing, expired, or already confirmed');
+        if (!operation.approvedByUser) throw new Error('Operation requires direct user approval in the visible spreadsheet');
+        if (operation.kind === 'clear_range') {
+          const sheet = this.store.getSheetByName(operation.args.sheet as string);
+          if (!sheet) throw new Error('Sheet not found');
+          this.store.clearRange(parseRange(operation.args.range as string), sheet.id);
+          this.dag.recalculateAll();
+        } else if (operation.kind === 'delete_sheet') {
+          const sheet = this.store.getSheetByName(operation.args.name as string);
+          if (!sheet || !this.store.deleteSheet(sheet.id)) throw new Error('Unable to delete sheet');
+        } else {
+          const sheet = this.store.getSheetByName(operation.args.sheet as string);
+          if (!sheet) throw new Error('Sheet not found');
+          const find = operation.args.find as string;
+          const replace = operation.args.replace as string;
+          const escapedFind = find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const testRegex = new RegExp(escapedFind, operation.args.matchCase ? '' : 'i');
+          const replaceRegex = new RegExp(escapedFind, operation.args.matchCase ? 'g' : 'gi');
+          this.store.recordHistory('Find and replace');
+          for (const [ref, cell] of Object.entries(sheet.cells)) {
+            if (testRegex.test(cell.raw)) {
+              const updated = cell.raw.replace(replaceRegex, replace);
+              this.store.setCellRaw(ref, updated, sheet.id, false);
+              this.dag.updateCellDependencies(ref, updated, sheet.id);
+            }
+          }
+          this.dag.recalculateAll();
+        }
+        this.pendingOperations.delete(operationId);
+        if (typeof document !== 'undefined') document.getElementById(`webmcp-confirmation-${operationId}`)?.remove();
+        return { success: true, operationId, summary: operation.summary };
+      },
+    });
+
+    this.addTool({
+      name: 'sheets_get_used_range', title: 'Get Used Range',
+      description: 'Return the smallest rectangular range containing populated cells in a sheet.',
+      schema: z.object({ sheet: z.string().optional() }), inputSchema: objectSchema, outputSchema: objectSchema, readOnly: true,
+      execute: async ({ sheet }) => {
+        const target = sheet ? this.store.getSheetByName(sheet) : this.store.getActiveSheet();
+        if (!target) throw new Error('Sheet not found');
+        const refs = Object.keys(target.cells);
+        if (!refs.length) return { sheet: target.name, range: null, populatedCells: 0 };
+        const coords = refs.map(parseCellRef);
+        return { sheet: target.name, range: `${coordsToRef(Math.min(...coords.map((c) => c.col)), Math.min(...coords.map((c) => c.row)))}:${coordsToRef(Math.max(...coords.map((c) => c.col)), Math.max(...coords.map((c) => c.row)))}`, populatedCells: refs.length };
+      },
+    });
+
+    this.addTool({
+      name: 'sheets_get_formula_errors', title: 'Get Formula Errors',
+      description: 'List cells with a formula evaluation error in the selected sheet.',
+      schema: z.object({ sheet: z.string().optional() }), inputSchema: objectSchema, outputSchema: objectSchema, readOnly: true,
+      execute: async ({ sheet }) => {
+        const target = sheet ? this.store.getSheetByName(sheet) : this.store.getActiveSheet();
+        if (!target) throw new Error('Sheet not found');
+        return { sheet: target.name, errors: Object.entries(target.cells).filter(([, cell]) => !!cell.error).map(([cell, data]) => ({ cell, raw: data.raw, error: data.error })) };
+      },
+    });
+
+    const formatSchema = z.object({ bold: z.boolean().optional(), italic: z.boolean().optional(), underline: z.boolean().optional(), strikethrough: z.boolean().optional(), textColor: z.string().optional(), bgColor: z.string().optional(), align: z.enum(['left', 'center', 'right']).optional(), numberFormat: z.enum(['text', 'number', 'currency', 'percent']).optional(), decimals: z.number().int().min(0).max(10).optional() });
+    this.addTool({
+      name: 'sheets_format_range', title: 'Format Cell Range',
+      description: 'Apply formatting to every cell in a bounded range.',
+      schema: z.object({ range: z.string().regex(/^([A-Za-z0-9_]+!)?[A-Za-z]+[1-9][0-9]*:[A-Za-z]+[1-9][0-9]*$/), format: formatSchema, sheet: z.string().optional() }), inputSchema: objectSchema, outputSchema: objectSchema, readOnly: false,
+      execute: async ({ range, format, sheet }) => { const target = sheet ? this.store.getSheetByName(sheet) : this.store.getActiveSheet(); if (!target) throw new Error('Sheet not found'); this.store.setRangeFormat(parseRange(range), format, target.id); return { success: true, range, sheet: target.name }; },
+    });
+
+    this.addTool({
+      name: 'sheets_rename_sheet', title: 'Rename Worksheet', description: 'Rename a worksheet while preserving its cells and formulas.',
+      schema: z.object({ name: z.string().min(1), newName: z.string().min(1).max(100) }), inputSchema: objectSchema, outputSchema: objectSchema, readOnly: false,
+      execute: async ({ name, newName }) => { const sheet = this.store.getSheetByName(name); if (!sheet || !this.store.renameSheet(sheet.id, newName)) throw new Error('Sheet rename failed; the name may already exist'); return { success: true, name: newName }; },
+    });
+
+    this.addTool({
+      name: 'sheets_duplicate_sheet', title: 'Duplicate Worksheet', description: 'Create a copy of a worksheet with a distinct name.',
+      schema: z.object({ name: z.string().min(1), newName: z.string().min(1).max(100) }), inputSchema: objectSchema, outputSchema: objectSchema, readOnly: false,
+      execute: async ({ name, newName }) => { const sheet = this.store.getSheetByName(name); const copy = sheet && this.store.duplicateSheet(sheet.id, newName); if (!copy) throw new Error('Sheet duplication failed; the new name may already exist'); return { success: true, sheetId: copy.id, name: copy.name }; },
+    });
+
+    this.addTool({
+      name: 'sheets_set_active_sheet', title: 'Set Active Worksheet', description: 'Make a named worksheet active in the visible spreadsheet.',
+      schema: z.object({ name: z.string().min(1) }), inputSchema: objectSchema, outputSchema: objectSchema, readOnly: false,
+      execute: async ({ name }) => { const sheet = this.store.getSheetByName(name); if (!sheet) throw new Error('Sheet not found'); this.store.setActiveSheet(sheet.id); return { success: true, activeSheet: sheet.name }; },
+    });
+
+    this.addTool({
+      name: 'sheets_undo', title: 'Undo Workbook Change', description: 'Undo the most recent workbook change, if one exists.',
+      schema: z.object({}), inputSchema: objectSchema, outputSchema: objectSchema, readOnly: false,
+      execute: async () => ({ success: this.store.undo() }),
+    });
+    this.addTool({
+      name: 'sheets_redo', title: 'Redo Workbook Change', description: 'Redo the next reverted workbook change, if one exists.',
+      schema: z.object({}), inputSchema: objectSchema, outputSchema: objectSchema, readOnly: false,
+      execute: async () => ({ success: this.store.redo() }),
+    });
+
   }
 
   private addTool(record: InternalToolRecord): void {
@@ -815,7 +1013,7 @@ export class WebMcpService {
       annotations: {
         readOnlyHint: record.readOnly,
       },
-      execute: record.execute,
+      execute: (rawInput: Record<string, unknown>) => this.executeTool(record.name, rawInput),
     };
 
     // Register on document.modelContext
@@ -854,7 +1052,7 @@ export class WebMcpService {
         description: record.description,
         inputSchema: schemaWrapper as any,
         annotations: { readOnlyHint: record.readOnly },
-        execute: record.execute,
+        execute: (rawInput: Record<string, unknown>) => this.executeTool(record.name, rawInput),
       });
     } catch {
       // safe fallback

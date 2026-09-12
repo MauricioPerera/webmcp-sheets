@@ -80,17 +80,17 @@ export class SheetTabs {
         const isActive = s.id === activeSheet.id;
         return `
         <div
-          data-sheet-id="${s.id}"
+          data-sheet-id="${escapeHtml(s.id)}"
           class="sheet-tab flex items-center gap-1.5 px-3 py-1 text-xs border-r border-gray-200 cursor-pointer select-none transition ${
             isActive
               ? 'bg-white font-medium text-emerald-800 border-b-2 border-b-emerald-600 shadow-xs'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200/70'
           }"
         >
-          <span class="sheet-name">${s.name}</span>
+          <span class="sheet-name">${escapeHtml(s.name)}</span>
           ${
             sheets.length > 1
-              ? `<button data-delete-sheet="${s.id}" title="Delete sheet" class="text-gray-400 hover:text-red-500 rounded p-0.5 text-[10px]">✕</button>`
+              ? `<button data-delete-sheet="${escapeHtml(s.id)}" title="Delete sheet" class="text-gray-400 hover:text-red-500 rounded p-0.5 text-[10px]">✕</button>`
               : ''
           }
         </div>
@@ -181,4 +181,10 @@ export class SheetTabs {
       });
     });
   }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char]!);
 }

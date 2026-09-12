@@ -47,7 +47,7 @@ export class MenuBar {
             <input
               id="doc-title-input"
               type="text"
-              value="${title}"
+              value="${escapeHtml(title)}"
               class="font-medium text-sm text-gray-800 hover:bg-gray-100 px-1 py-0.5 rounded border border-transparent hover:border-gray-300 focus:border-emerald-600 focus:bg-white focus:outline-none w-56"
             />
 
@@ -152,4 +152,10 @@ export class MenuBar {
       this.grid.render();
     });
   }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char]!);
 }

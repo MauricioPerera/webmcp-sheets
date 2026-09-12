@@ -239,7 +239,7 @@ export class SpreadsheetGrid {
         const ref = coordsToRef(c, r);
         const cell = sheet.cells[ref];
         const displayVal = cell?.error
-          ? `<span class="text-red-600 font-mono font-bold">${cell.error}</span>`
+          ? `<span class="text-red-600 font-mono font-bold">${escapeHtml(cell.error)}</span>`
           : cell?.computed !== undefined && cell?.computed !== null
           ? this.formatDisplayValue(cell.computed, cell.format)
           : cell?.raw
@@ -288,7 +288,7 @@ export class SpreadsheetGrid {
       });
     }
 
-    return String(val);
+    return escapeHtml(String(val));
   }
 
   private buildCellStyle(format?: any): string {
@@ -298,8 +298,8 @@ export class SpreadsheetGrid {
     if (format.italic) parts.push('font-style:italic');
     if (format.underline) parts.push('text-decoration:underline');
     if (format.strikethrough) parts.push('text-decoration:line-through');
-    if (format.textColor) parts.push(`color:${format.textColor}`);
-    if (format.bgColor) parts.push(`background-color:${format.bgColor}`);
+    if (isSafeColor(format.textColor)) parts.push(`color:${format.textColor}`);
+    if (isSafeColor(format.bgColor)) parts.push(`background-color:${format.bgColor}`);
     if (format.align) parts.push(`text-align:${format.align}`);
     return parts.join(';');
   }
@@ -559,4 +559,14 @@ export class SpreadsheetGrid {
       endRow: Math.max(this.selectionRange.startRow, this.selectionRange.endRow),
     };
   }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char]!);
+}
+
+function isSafeColor(value: unknown): value is string {
+  return typeof value === 'string' && /^(#[0-9a-f]{3,8}|rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)|rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(0|1|0?\.\d+)\s*\))$/i.test(value);
 }

@@ -1,6 +1,6 @@
 # WebMCP Sheets
 
-> Fully client-side Google Sheets clone with reactive formula calculation, DAG cycle detection, multi-sheet tabs, and 12 native WebMCP tools for autonomous AI agent pair programming and programmatic manipulation.
+> Fully client-side Google Sheets clone with reactive formula calculation, DAG cycle detection, multi-sheet tabs, and 21 bounded native WebMCP tools for autonomous AI agent pair programming and programmatic manipulation.
 
 WebMCP Sheets is a zero-latency, 100% in-browser spreadsheet application designed for seamless interoperability between human users and AI agents. It implements the WebMCP (Web Model Context Protocol) standard using FastWebMCP, exposing reactive spreadsheet tools directly to LLMs through browser automation, devtools, or browser agent extensions.
 
@@ -32,7 +32,7 @@ const logs = window.WebMCP.getLogs();
 
 ---
 
-## Tool Catalog (12 WebMCP Tools)
+## Tool Catalog (21 WebMCP Tools)
 
 ### 1. `sheets_get_cell`
 Get raw value, computed value, error state, and formatting of a specific cell.
@@ -105,7 +105,7 @@ Wipe values, formulas, and formatting from a rectangular range.
   - `range` (string, required): Range to wipe, e.g. `"B2:D10"`.
   - `sheet` (string, optional): Target sheet name.
 - **Returns**: `{ success: true, clearedRange: string }`
-- **Example**: `await window.WebMCP.execute('sheets_clear_range', { range: 'B2:B10' })`
+- This is a preview. Pass its returned `operationId` to `sheets_confirm_operation`; the browser asks the user before any data changes.
 
 ### 7. `sheets_create_sheet`
 Add a new sheet tab to the workbook.
@@ -121,7 +121,7 @@ Delete a sheet tab from the workbook (refuses if only one sheet remains).
 - **Parameters**:
   - `name` (string, required): Sheet name to remove.
 - **Returns**: `{ success: true, deleted: string }`
-- **Example**: `await window.WebMCP.execute('sheets_delete_sheet', { name: 'TempSheet' })`
+- This is a preview and requires `sheets_confirm_operation` after visible user approval.
 
 ### 9. `sheets_list_sheets`
 List all sheet tabs in the workbook with cell counts and active indicator.
@@ -139,7 +139,14 @@ Search and replace text or formula tokens across cells in a sheet.
   - `sheet` (string, optional): Target sheet name.
   - `matchCase` (boolean, optional): Case-sensitive matching (default `false`).
 - **Returns**: `{ success: true, replacementsCount: number }`
-- **Example**: `await window.WebMCP.execute('sheets_find_replace', { find: 'Widget', replace: 'SuperWidget' })`
+- This is a preview and requires `sheets_confirm_operation` after visible user approval.
+
+### Safety and extended tools
+
+- `sheets_confirm_operation({ operationId })` applies a previewed destructive change only after a visible browser confirmation.
+- `sheets_get_used_range({ sheet })` and `sheets_get_formula_errors({ sheet })` help agents inspect a sheet before editing.
+- `sheets_format_range`, `sheets_rename_sheet`, `sheets_duplicate_sheet`, `sheets_set_active_sheet`, `sheets_undo`, and `sheets_redo` support controlled workbook editing.
+- Ranges are capped at 10,000 cells; matrices at 100 by 100; individual text inputs at 10,000 characters; exports at 1 MB.
 
 ### 11. `sheets_export_data`
 Export spreadsheet contents as structured CSV or full JSON backup.

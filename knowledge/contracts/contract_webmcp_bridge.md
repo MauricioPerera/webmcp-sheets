@@ -1,7 +1,7 @@
 ---
 type: 'Task Contract'
 title: 'Implement WebMCP Bridge'
-description: 'FastWebMCP runtime and webmcp.com tool registry exposing 12 tools to autonomous AI agents.'
+description: 'FastWebMCP runtime and WebMCP registry exposing bounded, auditable tools to autonomous AI agents.'
 tags: ['ccdd', 'webmcp', 'fastwebmcp', 'agent', 'bridge']
 task: webmcp_bridge
 intent: 'Expose spreadsheet manipulation capabilities via WebMCP tools with Zod schema validation and browser fallback.'
@@ -11,9 +11,9 @@ test_command: 'npm test -- tests/webmcp-service.test.ts'
 budget:
   cyclomatic_max: 20
   nesting_max: 5
-  lines_max: 600
+  lines_max: 1200
 tests: tests/webmcp-service.test.ts
-tests_sha256: 3280fc8db778c5095be0227d82e301cfafd89c78221121eebcf25443a6282011
+tests_sha256: 5e74c64353175a0d34643c6bd85ee168889db3b5c9fbf58d7901835da2473ea4
 deps_allowed: ['zod', 'fastwebmcp']
 touch_only: ['src/core/webmcp-service.ts']
 forbids: ['eval', 'unvalidated-arguments']
@@ -36,8 +36,9 @@ export class WebMcpService {
 ```
 
 ## Invariants
-- All 12 core tools must validate their input arguments strictly through Zod schemas before execution.
+- All 21 registered tools must validate their input arguments strictly through the shared Zod dispatcher before execution.
 - Executed tool operations must be logged with duration, status, and outputs.
+- Destructive operations must return a short-lived preview ID and require visible confirmation before they change workbook data.
 
 ## Examples
 - Calling `sheets_set_cell` with `{ cell: 'B2', value: '42' }` sets the cell value and triggers recomputation.

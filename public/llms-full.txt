@@ -10,6 +10,10 @@
 
 ## 1. System Architecture
 
+### WebMCP safety extension
+
+The runtime exposes 21 tools through one validated dispatcher. Range calls are capped at 10,000 cells, matrices at 100 by 100, text at 10,000 characters, and exports at 1 MB. Destructive requests create a 60-second preview operation and require `sheets_confirm_operation` plus a visible browser confirmation.
+
 WebMCP Sheets operates 100% in the client's browser without requiring backend servers.
 - **State Store**: Reactive in-memory store (`CellStore`) managing multiple worksheet tabs.
 - **Calculation Engine**: Custom lexical tokenizer and Shunting-Yard AST evaluator supporting 30+ functions.

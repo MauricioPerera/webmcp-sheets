@@ -189,7 +189,7 @@ export class HtmxRouter {
             </div>
             <div>
               <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Preview</label>
-              <textarea readonly class="w-full h-32 px-3 py-2 border border-gray-200 rounded font-mono text-xs text-gray-600 bg-gray-50 resize-none focus:outline-none">${csvData.substring(0, 500)}${csvData.length > 500 ? '...' : ''}</textarea>
+              <textarea readonly class="w-full h-32 px-3 py-2 border border-gray-200 rounded font-mono text-xs text-gray-600 bg-gray-50 resize-none focus:outline-none">${escapeHtml(csvData.substring(0, 500))}${csvData.length > 500 ? '...' : ''}</textarea>
             </div>
           </div>
           <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
@@ -339,4 +339,10 @@ export class HtmxRouter {
       </div>
     `;
   }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char]!);
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CellStore } from '../src/core/cell-store';
 import { FormulaEngine } from '../src/core/formula-engine';
 import { DependencyGraph } from '../src/core/dependency-graph';
@@ -20,9 +20,9 @@ describe('WebMcpService (FastWebMCP & webmcp.com standards)', () => {
     webmcp = new WebMcpService(store, engine, dag, io);
   });
 
-  it('registers all 12 core non-overlapping WebMCP spreadsheet tools', () => {
+  it('registers 21 bounded WebMCP spreadsheet tools', () => {
     const tools = webmcp.getRegisteredTools();
-    expect(tools.length).toBe(12);
+    expect(tools.length).toBe(21);
 
     const toolNames = tools.map((t) => t.name);
     expect(toolNames).toContain('sheets_get_cell');
@@ -37,6 +37,15 @@ describe('WebMcpService (FastWebMCP & webmcp.com standards)', () => {
     expect(toolNames).toContain('sheets_find_replace');
     expect(toolNames).toContain('sheets_export_data');
     expect(toolNames).toContain('sheets_get_summary');
+    expect(toolNames).toContain('sheets_confirm_operation');
+    expect(toolNames).toContain('sheets_get_used_range');
+    expect(toolNames).toContain('sheets_get_formula_errors');
+    expect(toolNames).toContain('sheets_format_range');
+    expect(toolNames).toContain('sheets_rename_sheet');
+    expect(toolNames).toContain('sheets_duplicate_sheet');
+    expect(toolNames).toContain('sheets_set_active_sheet');
+    expect(toolNames).toContain('sheets_undo');
+    expect(toolNames).toContain('sheets_redo');
   });
 
   it('executes sheets_set_cell and sheets_get_cell', async () => {
@@ -91,5 +100,51 @@ describe('WebMcpService (FastWebMCP & webmcp.com standards)', () => {
     expect(logs.length).toBeGreaterThan(0);
     expect(logs[logs.length - 1].toolName).toBe('sheets_set_cell');
     expect(logs[logs.length - 1].status).toBe('success');
+  });
+
+  it('rejects malformed and oversized WebMCP inputs before execution', async () => {
+    await expect(webmcp.executeTool('sheets_get_range', { range: 'A0:B1' })).rejects.toThrow();
+    await expect(webmcp.executeTool('sheets_get_range', { range: 'A1:ZZZ1000' })).rejects.toThrow('cell limit');
+    await expect(webmcp.executeTool('sheets_set_cell', { cell: 'A1', value: 'x'.repeat(10_001) })).rejects.toThrow('character limit');
+  });
+
+  it('previews destructive operations without changing cells', async () => {
+    await webmcp.executeTool('sheets_set_cell', { cell: 'A1', value: 'keep' });
+    const preview = await webmcp.executeTool('sheets_clear_range', { range: 'A1:A1' }) as any;
+    expect(preview.operationId).toMatch(/^op_/);
+    expect((await webmcp.executeTool('sheets_get_cell', { cell: 'A1' }) as any).value).toBe('keep');
+    await expect(webmcp.executeTool('sheets_confirm_operation', { operationId: preview.operationId })).rejects.toThrow('direct user approval');
+  });
+
+  it('requires visible confirmation before applying every destructive preview', async () => {
+    await webmcp.executeTool('sheets_set_cell', { cell: 'A1', value: 'replace me' });
+    const clear = await webmcp.executeTool('sheets_clear_range', { range: 'A1:A1' }) as any;
+    expect(webmcp.approvePendingOperation(clear.operationId)).toBe(true);
+    await webmcp.executeTool('sheets_confirm_operation', { operationId: clear.operationId });
+    expect((await webmcp.executeTool('sheets_get_cell', { cell: 'A1' }) as any).value).toBe('');
+    await webmcp.executeTool('sheets_set_cell', { cell: 'A1', value: 'replace me' });
+    const replace = await webmcp.executeTool('sheets_find_replace', { find: 'replace', replace: 'updated' }) as any;
+    expect(webmcp.approvePendingOperation(replace.operationId)).toBe(true);
+    await webmcp.executeTool('sheets_confirm_operation', { operationId: replace.operationId });
+    expect((await webmcp.executeTool('sheets_get_cell', { cell: 'A1' }) as any).raw).toBe('updated me');
+    await webmcp.executeTool('sheets_create_sheet', { name: 'Temporary' });
+    const deletion = await webmcp.executeTool('sheets_delete_sheet', { name: 'Temporary' }) as any;
+    expect(webmcp.approvePendingOperation(deletion.operationId)).toBe(true);
+    await webmcp.executeTool('sheets_confirm_operation', { operationId: deletion.operationId });
+    expect((await webmcp.executeTool('sheets_list_sheets', {}) as any).sheets.some((s: any) => s.name === 'Temporary')).toBe(false);
+  });
+
+  it('supports agent worksheet operations and recovery', async () => {
+    await webmcp.executeTool('sheets_set_range', { startCell: 'A1', values: [['x', '1'], ['y', '2']] });
+    expect((await webmcp.executeTool('sheets_get_used_range', {}) as any).range).toBe('A1:B2');
+    await webmcp.executeTool('sheets_format_range', { range: 'A1:B1', format: { bold: true } });
+    expect((await webmcp.executeTool('sheets_get_cell', { cell: 'A1' }) as any).format.bold).toBe(true);
+    await webmcp.executeTool('sheets_create_sheet', { name: 'Data' });
+    await webmcp.executeTool('sheets_rename_sheet', { name: 'Data', newName: 'Archive' });
+    await webmcp.executeTool('sheets_duplicate_sheet', { name: 'Archive', newName: 'Copy' });
+    await webmcp.executeTool('sheets_set_active_sheet', { name: 'Archive' });
+    expect((await webmcp.executeTool('sheets_list_sheets', {}) as any).activeSheet).toBe('Archive');
+    expect((await webmcp.executeTool('sheets_undo', {}) as any).success).toBe(true);
+    expect((await webmcp.executeTool('sheets_redo', {}) as any).success).toBe(true);
   });
 });

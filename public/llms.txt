@@ -1,6 +1,6 @@
 # WebMCP Sheets
 
-> Fully client-side Google Sheets clone with reactive formula calculation, DAG cycle detection, multi-sheet tabs, and 12 native WebMCP tools for autonomous AI agent pair programming and programmatic manipulation.
+> Fully client-side Google Sheets clone with reactive formula calculation, DAG cycle detection, multi-sheet tabs, and 21 bounded native WebMCP tools for autonomous AI agent pair programming and programmatic manipulation.
 
 WebMCP Sheets is a zero-latency, 100% in-browser spreadsheet application designed for seamless interoperability between human users and AI agents. It implements the WebMCP (Web Model Context Protocol) standard using FastWebMCP, exposing reactive spreadsheet tools directly to LLMs through browser automation, devtools, or browser agent extensions.
 
@@ -10,6 +10,11 @@ WebMCP Sheets is a zero-latency, 100% in-browser spreadsheet application designe
 - **Architecture**: Knowledge-Driven Development (KDD) with Open Knowledge Format (OKF) and Contract-Driven Development (CCDD).
 
 ---
+
+## WebMCP safety
+
+All tool calls are Zod-validated, logged, and bounded to 10,000 cells per range. Clear, delete, and find/replace requests are previews: they return a 60-second operation ID and require `sheets_confirm_operation` plus visible user confirmation before changing data.
+
 
 ## Agent Invocation Interface
 

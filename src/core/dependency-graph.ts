@@ -139,7 +139,14 @@ export class DependencyGraph {
       }
     }
 
-    // Topologically evaluate all cells
+    // Evaluate literals too; they are not represented as dependency nodes.
+    for (const sheet of this.store.getSheets()) {
+      for (const [ref, cell] of Object.entries(sheet.cells)) {
+        if (!cell.raw.trim().startsWith('=')) this.evaluateSingleCell(ref, sheet.id);
+      }
+    }
+
+    // Topologically evaluate all formula cells
     const allCells = Array.from(this.dependencies.keys());
     const sorted = this.topologicalSort(allCells);
     for (const key of sorted) {
